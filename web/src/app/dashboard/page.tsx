@@ -66,17 +66,17 @@ function Sparkline({ data, color = "teal" }: { data: number[]; color?: string })
 
   const strokeColor =
     color === "profit"
-      ? "oklch(0.70 0.22 155)"
+      ? "oklch(0.50 0.20 155)"
       : color === "loss"
-        ? "oklch(0.62 0.22 25)"
-        : "oklch(0.72 0.15 175)";
+        ? "oklch(0.52 0.22 25)"
+        : "oklch(0.55 0.18 175)";
 
   const lastPoint = data[data.length - 1];
   const firstPoint = data[0];
   const fillColor =
     lastPoint >= firstPoint
-      ? "oklch(0.70 0.22 155 / 0.08)"
-      : "oklch(0.62 0.22 25 / 0.08)";
+      ? "oklch(0.50 0.20 155 / 0.08)"
+      : "oklch(0.52 0.22 25 / 0.08)";
 
   return (
     <svg width={w} height={h} className="overflow-visible">
@@ -116,9 +116,9 @@ function ConfidenceRing({ score }: { score: number }) {
   const offset = circumference - (score / 100) * circumference;
   const color =
     score >= 80
-      ? "oklch(0.70 0.22 155)"
+      ? "oklch(0.50 0.20 155)"
       : score >= 60
-        ? "oklch(0.78 0.14 85)"
+        ? "oklch(0.65 0.16 85)"
         : "oklch(0.55 0.015 250)";
 
   return (
@@ -129,7 +129,7 @@ function ConfidenceRing({ score }: { score: number }) {
           cy="22"
           r={radius}
           fill="none"
-          stroke="oklch(0.20 0.012 250)"
+          stroke="oklch(0.90 0.006 90)"
           strokeWidth="3"
         />
         <circle
@@ -165,10 +165,10 @@ function SourceIcon({ source }: { source: string }) {
     manual: "M",
   };
   const colors: Record<string, string> = {
-    congressional: "bg-[oklch(0.72_0.15_175_/_0.12)] text-teal border-[oklch(0.72_0.15_175_/_0.25)]",
-    flow: "bg-[oklch(0.78_0.14_85_/_0.12)] text-gold border-[oklch(0.78_0.14_85_/_0.25)]",
+    congressional: "bg-[oklch(0.55_0.18_175_/_0.12)] text-teal border-[oklch(0.55_0.18_175_/_0.25)]",
+    flow: "bg-[oklch(0.65_0.16_85_/_0.12)] text-gold border-[oklch(0.65_0.16_85_/_0.25)]",
     polymarket: "bg-[oklch(0.60_0.12_200_/_0.12)] text-[oklch(0.65_0.12_200)] border-[oklch(0.60_0.12_200_/_0.25)]",
-    manual: "bg-[oklch(0.55_0.015_250_/_0.12)] text-muted-foreground border-[oklch(0.30_0.01_250)]",
+    manual: "bg-[oklch(0.50_0.015_250_/_0.08)] text-muted-foreground border-[oklch(0.80_0.01_250)]",
   };
 
   return (
@@ -252,7 +252,7 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Header row with wave accent */}
-      <div className="relative overflow-hidden rounded-xl bg-[oklch(0.12_0.010_250)] border border-border p-6">
+      <div className="relative overflow-hidden rounded-xl bg-[oklch(1.00_0_0)] border border-border p-6">
         {/* Background wave */}
         <svg
           className="absolute right-0 top-0 h-full w-1/2 opacity-[0.04]"
@@ -262,7 +262,7 @@ export default function DashboardOverview() {
         >
           <path
             d="M0 100 Q50 40 100 80 Q150 120 200 60 Q250 0 300 80 Q350 160 400 100 L400 200 L0 200Z"
-            fill="oklch(0.72 0.15 175)"
+            fill="oklch(0.55 0.18 175)"
           />
         </svg>
 
@@ -286,7 +286,7 @@ export default function DashboardOverview() {
               >
                 {fmtCurrency(snapshot?.daily_pnl ?? null)} today
               </span>
-              <span className="text-[oklch(0.30_0.01_250)]">|</span>
+              <span className="text-[oklch(0.80_0.01_250)]">|</span>
               <span
                 className={`text-sm font-mono font-medium ${totalPnl >= 0 ? "text-profit" : "text-loss"}`}
               >
@@ -348,14 +348,14 @@ export default function DashboardOverview() {
 
             {positions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="w-10 h-10 rounded-full bg-[oklch(0.14_0.012_250)] border border-border flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.95_0.006_90)] border border-border flex items-center justify-center mb-3">
                   <svg className="w-5 h-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M22 7 13.5 15.5 8.5 10.5 2 17" strokeLinecap="round" strokeLinejoin="round" />
                     <path d="M16 7h6v6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <p className="text-xs text-muted-foreground">No open positions</p>
-                <p className="text-[10px] text-[oklch(0.35_0.01_250)] mt-1">
+                <p className="text-[10px] text-[oklch(0.60_0.01_250)] mt-1">
                   Signals will generate positions automatically
                 </p>
               </div>
@@ -364,17 +364,17 @@ export default function DashboardOverview() {
                 {positions.slice(0, 6).map((pos) => (
                   <div
                     key={pos.id}
-                    className="group flex items-center justify-between rounded-lg bg-[oklch(0.11_0.010_250)] border border-[oklch(0.18_0.012_250)] px-3 py-2.5 hover:border-[oklch(0.25_0.012_250)] transition-colors"
+                    className="group flex items-center justify-between rounded-lg bg-[oklch(0.97_0.003_90)] border border-[oklch(0.92_0.006_90)] px-3 py-2.5 hover:border-[oklch(0.82_0.010_175)] transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex-shrink-0">
                         <div
                           className={`w-8 h-8 rounded-md flex items-center justify-center text-[10px] font-mono font-bold border ${
                             pos.call_put === "call"
-                              ? "bg-[oklch(0.70_0.22_155_/_0.08)] text-profit border-[oklch(0.70_0.22_155_/_0.2)]"
+                              ? "bg-[oklch(0.50_0.20_155_/_0.08)] text-profit border-[oklch(0.50_0.20_155_/_0.2)]"
                               : pos.call_put === "put"
-                                ? "bg-[oklch(0.62_0.22_25_/_0.08)] text-loss border-[oklch(0.62_0.22_25_/_0.2)]"
-                                : "bg-[oklch(0.18_0.012_250)] text-muted-foreground border-border"
+                                ? "bg-[oklch(0.52_0.22_25_/_0.08)] text-loss border-[oklch(0.52_0.22_25_/_0.2)]"
+                                : "bg-[oklch(0.94_0.006_90)] text-muted-foreground border-border"
                           }`}
                         >
                           {pos.call_put ? pos.call_put[0].toUpperCase() : "EQ"}
@@ -419,7 +419,7 @@ export default function DashboardOverview() {
                   AI Signals
                 </h3>
                 {pendingSignals.length > 0 && (
-                  <div className="flex items-center gap-1 rounded-full bg-[oklch(0.78_0.14_85_/_0.10)] border border-[oklch(0.78_0.14_85_/_0.25)] px-2 py-0.5">
+                  <div className="flex items-center gap-1 rounded-full bg-[oklch(0.65_0.16_85_/_0.10)] border border-[oklch(0.65_0.16_85_/_0.25)] px-2 py-0.5">
                     <div className="h-1 w-1 rounded-full bg-gold animate-pulse-live" />
                     <span className="text-[9px] font-mono font-bold text-gold">
                       {pendingSignals.length}
@@ -434,13 +434,13 @@ export default function DashboardOverview() {
 
             {pendingSignals.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="w-10 h-10 rounded-full bg-[oklch(0.14_0.012_250)] border border-border flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.95_0.006_90)] border border-border flex items-center justify-center mb-3">
                   <svg className="w-5 h-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <p className="text-xs text-muted-foreground">No pending signals</p>
-                <p className="text-[10px] text-[oklch(0.35_0.01_250)] mt-1">
+                <p className="text-[10px] text-[oklch(0.60_0.01_250)] mt-1">
                   Claude AI is monitoring flow data
                 </p>
               </div>
@@ -449,7 +449,7 @@ export default function DashboardOverview() {
                 {pendingSignals.map((sig) => (
                   <div
                     key={sig.id}
-                    className="group rounded-lg bg-[oklch(0.11_0.010_250)] border border-[oklch(0.18_0.012_250)] px-3 py-2.5 hover:border-[oklch(0.25_0.012_250)] transition-colors"
+                    className="group rounded-lg bg-[oklch(0.97_0.003_90)] border border-[oklch(0.92_0.006_90)] px-3 py-2.5 hover:border-[oklch(0.82_0.010_175)] transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -463,8 +463,8 @@ export default function DashboardOverview() {
                               variant="outline"
                               className={`text-[9px] px-1.5 py-0 h-4 font-mono ${
                                 sig.direction === "bullish"
-                                  ? "border-[oklch(0.70_0.22_155_/_0.3)] text-profit bg-[oklch(0.70_0.22_155_/_0.06)]"
-                                  : "border-[oklch(0.62_0.22_25_/_0.3)] text-loss bg-[oklch(0.62_0.22_25_/_0.06)]"
+                                  ? "border-[oklch(0.50_0.20_155_/_0.3)] text-profit bg-[oklch(0.50_0.20_155_/_0.06)]"
+                                  : "border-[oklch(0.52_0.22_25_/_0.3)] text-loss bg-[oklch(0.52_0.22_25_/_0.06)]"
                               }`}
                             >
                               {sig.direction === "bullish" ? "LONG" : "SHORT"}
@@ -498,7 +498,7 @@ export default function DashboardOverview() {
 
             {recentTrades.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="w-10 h-10 rounded-full bg-[oklch(0.14_0.012_250)] border border-border flex items-center justify-center mb-3">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.95_0.006_90)] border border-border flex items-center justify-center mb-3">
                   <svg className="w-5 h-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="m16 3 4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
                     <path d="M20 7H4" strokeLinecap="round" strokeLinejoin="round" />
@@ -507,7 +507,7 @@ export default function DashboardOverview() {
                   </svg>
                 </div>
                 <p className="text-xs text-muted-foreground">No trades yet</p>
-                <p className="text-[10px] text-[oklch(0.35_0.01_250)] mt-1">
+                <p className="text-[10px] text-[oklch(0.60_0.01_250)] mt-1">
                   Approved signals will execute here
                 </p>
               </div>
@@ -518,15 +518,15 @@ export default function DashboardOverview() {
                   return (
                     <div
                       key={trade.id}
-                      className="rounded-lg bg-[oklch(0.11_0.010_250)] border border-[oklch(0.18_0.012_250)] px-3 py-2.5"
+                      className="rounded-lg bg-[oklch(0.97_0.003_90)] border border-[oklch(0.92_0.006_90)] px-3 py-2.5"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div
                             className={`w-7 h-7 rounded-md flex items-center justify-center border text-[10px] font-mono font-bold ${
                               isBuy
-                                ? "bg-[oklch(0.70_0.22_155_/_0.08)] text-profit border-[oklch(0.70_0.22_155_/_0.2)]"
-                                : "bg-[oklch(0.62_0.22_25_/_0.08)] text-loss border-[oklch(0.62_0.22_25_/_0.2)]"
+                                ? "bg-[oklch(0.50_0.20_155_/_0.08)] text-profit border-[oklch(0.50_0.20_155_/_0.2)]"
+                                : "bg-[oklch(0.52_0.22_25_/_0.08)] text-loss border-[oklch(0.52_0.22_25_/_0.2)]"
                             }`}
                           >
                             {isBuy ? "B" : "S"}
@@ -546,10 +546,10 @@ export default function DashboardOverview() {
                             variant="outline"
                             className={`text-[9px] px-1.5 py-0 h-4 font-mono ${
                               trade.status === "filled"
-                                ? "border-[oklch(0.70_0.22_155_/_0.3)] text-profit"
+                                ? "border-[oklch(0.50_0.20_155_/_0.3)] text-profit"
                                 : trade.status === "failed"
-                                  ? "border-[oklch(0.62_0.22_25_/_0.3)] text-loss"
-                                  : "border-[oklch(0.78_0.14_85_/_0.3)] text-gold"
+                                  ? "border-[oklch(0.52_0.22_25_/_0.3)] text-loss"
+                                  : "border-[oklch(0.65_0.16_85_/_0.3)] text-gold"
                             }`}
                           >
                             {trade.status.toUpperCase()}

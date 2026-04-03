@@ -40,10 +40,9 @@ async def main() -> None:
     ai_pipeline = AIPipeline(uw, analyst)
     signal_engine = SignalEngine(uw)  # kept for signal lifecycle management
 
-    # Use paper broker by default; switch to IBKRBroker for live trading
-    # from src.broker.ibkr import IBKRBroker
-    # broker = IBKRBroker()
-    broker = PaperBroker(initial_balance=15_000.0)
+    # Connect to IBKR paper trading via TWS Gateway
+    from src.broker.ibkr import IBKRBroker
+    broker = IBKRBroker()
     await broker.connect()
 
     risk_manager = RiskManager(broker)
@@ -56,7 +55,7 @@ async def main() -> None:
         "details": {
             "started_at": datetime.now(timezone.utc).isoformat(),
             "mode": settings.bot_mode,
-            "broker": "paper",
+            "broker": "ibkr_paper",
         },
     }).execute()
 

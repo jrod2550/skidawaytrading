@@ -18,8 +18,10 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-HAIKU = "claude-haiku-4-5-20251001"
-SONNET = "claude-sonnet-4-6-20250514"
+HAIKU = "claude-3-haiku-20240307"
+# Use Haiku for deep analysis too until API key has Sonnet access
+# Upgrade to "claude-3-5-sonnet-latest" when available on your plan
+SONNET = "claude-3-haiku-20240307"
 
 SYSTEM_PROMPT = """You are a senior institutional options flow analyst at a quantitative hedge fund.
 You analyze raw market data — options flow, congressional trades, dark pool prints, and prediction
@@ -45,21 +47,13 @@ Most signals should score 30-60 (noise). Only exceptional setups score 70+.
 
 Always respond in valid JSON format."""
 
-SCREEN_PROMPT = """Analyze this options flow alert and determine if it warrants deeper analysis.
+SCREEN_PROMPT = """Analyze this options flow alert. Respond ONLY with a short JSON object, no explanation outside the JSON.
 
-Flow Alert Data:
+Flow Data:
 {flow_data}
 
-Respond in JSON:
-{{
-  "pass_to_deep_analysis": true/false,
-  "initial_score": 0-100,
-  "reasoning": "1-2 sentence explanation",
-  "is_institutional": true/false,
-  "is_hedge": true/false,
-  "ticker": "SYMBOL",
-  "direction": "bullish" or "bearish"
-}}"""
+JSON format (keep reasoning under 30 words):
+{{"pass_to_deep_analysis":true/false,"initial_score":0-100,"reasoning":"brief","is_institutional":true/false,"is_hedge":true/false,"ticker":"SYM","direction":"bullish"/"bearish"}}"""
 
 DEEP_ANALYSIS_PROMPT = """Perform deep institutional analysis on this trading signal.
 
@@ -127,6 +121,12 @@ Respond in JSON:
 class ClaudeAnalyst:
     """AI analyst that processes market data through Claude."""
 
+    # Cost per token (as of 2025 pricing)
+    TOKEN_COSTS = {
+        HAIKU: {"input": 0.25 / 1_000_000, "output": 1.25 / 1_000_000},
+        SONNET: {"input": 3.00 / 1_000_000, "output": 15.00 / 1_000_000},
+    }
+
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(
             base_url="https://api.anthropic.com",
@@ -137,6 +137,9 @@ class ClaudeAnalyst:
             },
             timeout=30.0,
         )
+        # Running token/cost totals for this session
+        self.session_tokens = {"input": 0, "output": 0}
+        self.session_cost = 0.0
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -147,7 +150,9 @@ class ClaudeAnalyst:
         model: str = HAIKU,
         max_tokens: int = 1024,
     ) -> dict:
-        """Call Claude API and parse JSON response."""
+        """Call Claude API and parse JSON response. Includes _token_usage in result."""
+        import re
+
         try:
             resp = await self._client.post(
                 "/v1/messages",
@@ -161,23 +166,82 @@ class ClaudeAnalyst:
             resp.raise_for_status()
             data = resp.json()
 
-            # Extract text content
+            # Track token usage
+            usage = data.get("usage", {})
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = usage.get("output_tokens", 0)
+            costs = self.TOKEN_COSTS.get(model, self.TOKEN_COSTS[HAIKU])
+            call_cost = input_tokens * costs["input"] + output_tokens * costs["output"]
+
+            self.session_tokens["input"] += input_tokens
+            self.session_tokens["output"] += output_tokens
+            self.session_cost += call_cost
+
+            token_usage = {
+                "model": model,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+                "cost_usd": round(call_cost, 6),
+                "session_cost_usd": round(self.session_cost, 4),
+            }
+
             text = data["content"][0]["text"]
 
-            # Parse JSON from response (handle markdown code blocks)
+            # Try multiple JSON extraction strategies
+            # Strategy 1: code blocks
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0]
             elif "```" in text:
                 text = text.split("```")[1].split("```")[0]
 
-            return json.loads(text.strip())
+            # Strategy 2: find first { to last }
+            start = text.find("{")
+            end = text.rfind("}")
+            if start != -1 and end != -1:
+                text = text[start : end + 1]
+
+            try:
+                result = json.loads(text.strip())
+                result["_token_usage"] = token_usage
+                return result
+            except json.JSONDecodeError:
+                # Strategy 3: regex extract key fields from malformed JSON
+                score_match = re.search(r'"initial_score"\s*:\s*(\d+)', text)
+                pass_match = re.search(r'"pass_to_deep_analysis"\s*:\s*(true|false)', text, re.I)
+                dir_match = re.search(r'"direction"\s*:\s*"(bullish|bearish)"', text)
+                ticker_match = re.search(r'"ticker"\s*:\s*"([A-Z.]+)"', text)
+                inst_match = re.search(r'"is_institutional"\s*:\s*(true|false)', text, re.I)
+                hedge_match = re.search(r'"is_hedge"\s*:\s*(true|false)', text, re.I)
+                conf_match = re.search(r'"confidence_score"\s*:\s*(\d+)', text)
+
+                result = {}
+                if score_match:
+                    result["initial_score"] = int(score_match.group(1))
+                if pass_match:
+                    result["pass_to_deep_analysis"] = pass_match.group(1).lower() == "true"
+                if dir_match:
+                    result["direction"] = dir_match.group(1)
+                if ticker_match:
+                    result["ticker"] = ticker_match.group(1)
+                if inst_match:
+                    result["is_institutional"] = inst_match.group(1).lower() == "true"
+                if hedge_match:
+                    result["is_hedge"] = hedge_match.group(1).lower() == "true"
+                if conf_match:
+                    result["confidence_score"] = int(conf_match.group(1))
+
+                if result:
+                    result["_token_usage"] = token_usage
+                    logger.debug("Recovered partial JSON for %s", result.get("ticker", "?"))
+                    return result
+
+                logger.error("Could not parse Claude response: %s", text[:200])
+                return {"error": "JSON parse failed", "confidence_score": 0, "_token_usage": token_usage}
 
         except httpx.HTTPStatusError as e:
             logger.error("Claude API error %d: %s", e.response.status_code, e.response.text)
             return {"error": str(e), "confidence_score": 0}
-        except json.JSONDecodeError as e:
-            logger.error("Failed to parse Claude response as JSON: %s", e)
-            return {"error": "JSON parse failed", "confidence_score": 0}
         except Exception as e:
             logger.exception("Unexpected error calling Claude")
             return {"error": str(e), "confidence_score": 0}

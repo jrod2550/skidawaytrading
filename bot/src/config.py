@@ -1,13 +1,14 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # Supabase
-    supabase_url: str
-    supabase_service_role_key: str
+    supabase_url: str = Field(alias="next_public_supabase_url")
+    supabase_service_role_key: str = ""
 
     # Unusual Whales
-    uw_api_key: str
+    uw_api_key: str = ""
     uw_base_url: str = "https://api.unusualwhales.com"
     uw_websocket_url: str = "wss://feed.unusualwhales.com"
 
@@ -15,6 +16,8 @@ class Settings(BaseSettings):
     ibkr_host: str = "127.0.0.1"
     ibkr_port: int = 4002  # 4001=live, 4002=paper
     ibkr_client_id: int = 1
+    ibkr_username: str = ""
+    ibkr_password: str = ""
 
     # Anthropic
     anthropic_api_key: str = ""
@@ -25,7 +28,12 @@ class Settings(BaseSettings):
     congressional_poll_minutes: int = 30
     log_level: str = "INFO"
 
-    model_config = {"env_file": "../.env", "env_file_encoding": "utf-8"}
+    model_config = {
+        "env_file": "../.env",
+        "env_file_encoding": "utf-8",
+        "populate_by_name": True,
+        "extra": "ignore",
+    }
 
 
 settings = Settings()  # type: ignore[call-arg]

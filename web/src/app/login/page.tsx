@@ -39,7 +39,7 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
       {/* Atmospheric background */}
-      <div className="absolute inset-0 bg-[oklch(0.06_0.015_250)]" />
+      <div className="absolute inset-0 bg-[oklch(0.97_0.003_90)]" />
 
       {/* Animated wave layers */}
       <svg
@@ -50,18 +50,18 @@ export default function LoginPage() {
       >
         <path
           d="M0 400 Q180 300 360 380 Q540 460 720 350 Q900 240 1080 380 Q1260 520 1440 400 L1440 600 L0 600Z"
-          fill="oklch(0.72 0.15 175)"
+          fill="oklch(0.55 0.18 175)"
         />
         <path
           d="M0 450 Q240 350 480 420 Q720 490 960 380 Q1200 270 1440 420 L1440 600 L0 600Z"
-          fill="oklch(0.72 0.15 175)"
+          fill="oklch(0.55 0.18 175)"
           opacity="0.5"
         />
       </svg>
 
       {/* Radial glow behind card */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[oklch(0.72_0.15_175_/_0.04)] blur-[120px]" />
-      <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] rounded-full bg-[oklch(0.78_0.14_85_/_0.03)] blur-[100px]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[oklch(0.55_0.18_175_/_0.06)] blur-[120px]" />
+      <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] rounded-full bg-[oklch(0.65_0.16_85_/_0.04)] blur-[100px]" />
 
       {/* Noise overlay */}
       <div className="noise-overlay" />
@@ -85,17 +85,17 @@ export default function LoginPage() {
             Skidaway Trading
           </h1>
           <div className="mt-1.5 flex items-center justify-center gap-2">
-            <div className="h-px w-8 bg-gradient-to-r from-transparent to-[oklch(0.72_0.15_175_/_0.4)]" />
+            <div className="h-px w-8 bg-gradient-to-r from-transparent to-[oklch(0.55_0.18_175_/_0.3)]" />
             <span className="text-[11px] font-medium tracking-[0.2em] uppercase text-sand">
               Savannah, GA
             </span>
-            <div className="h-px w-8 bg-gradient-to-l from-transparent to-[oklch(0.72_0.15_175_/_0.4)]" />
+            <div className="h-px w-8 bg-gradient-to-l from-transparent to-[oklch(0.55_0.18_175_/_0.3)]" />
           </div>
         </div>
 
         {/* Login card */}
         <div
-          className="animate-fade-up rounded-xl bg-[oklch(0.12_0.010_250_/_0.8)] backdrop-blur-xl border border-[oklch(0.22_0.012_250)] p-8"
+          className="animate-fade-up rounded-xl bg-[oklch(1.00_0_0_/_0.85)] backdrop-blur-xl border border-[oklch(0.88_0.008_90)] p-8"
           style={{ animationDelay: "100ms" }}
         >
           <form onSubmit={handleLogin} className="space-y-5">
@@ -117,7 +117,7 @@ export default function LoginPage() {
                 onFocus={() => setFocused("email")}
                 onBlur={() => setFocused(null)}
                 required
-                className="h-11 bg-[oklch(0.08_0.010_250)] border-[oklch(0.22_0.012_250)] text-foreground placeholder:text-[oklch(0.35_0.01_250)] focus:border-teal focus:ring-1 focus:ring-teal/30 transition-all"
+                className="h-11 bg-[oklch(0.96_0.003_90)] border-[oklch(0.88_0.008_90)] text-foreground placeholder:text-[oklch(0.60_0.01_250)] focus:border-teal focus:ring-1 focus:ring-teal/30 transition-all"
               />
             </div>
 
@@ -138,12 +138,12 @@ export default function LoginPage() {
                 onFocus={() => setFocused("password")}
                 onBlur={() => setFocused(null)}
                 required
-                className="h-11 bg-[oklch(0.08_0.010_250)] border-[oklch(0.22_0.012_250)] text-foreground placeholder:text-[oklch(0.35_0.01_250)] focus:border-teal focus:ring-1 focus:ring-teal/30 transition-all"
+                className="h-11 bg-[oklch(0.96_0.003_90)] border-[oklch(0.88_0.008_90)] text-foreground placeholder:text-[oklch(0.60_0.01_250)] focus:border-teal focus:ring-1 focus:ring-teal/30 transition-all"
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 rounded-lg bg-[oklch(0.62_0.22_25_/_0.08)] border border-[oklch(0.62_0.22_25_/_0.2)] px-3 py-2.5">
+              <div className="flex items-center gap-2 rounded-lg bg-[oklch(0.52_0.22_25_/_0.06)] border border-[oklch(0.52_0.22_25_/_0.15)] px-3 py-2.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-loss flex-shrink-0" />
                 <p className="text-xs text-loss">{error}</p>
               </div>
@@ -152,7 +152,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 bg-teal text-teal-foreground font-medium tracking-wide hover:bg-[oklch(0.68_0.15_175)] active:bg-[oklch(0.65_0.15_175)] transition-all duration-200 glow-teal disabled:opacity-50 disabled:shadow-none"
+              className="w-full h-11 bg-teal text-teal-foreground font-medium tracking-wide hover:bg-[oklch(0.50_0.18_175)] active:bg-[oklch(0.47_0.18_175)] transition-all duration-200 glow-teal disabled:opacity-50 disabled:shadow-none"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export default function LoginPage() {
           className="animate-fade-up mt-8 text-center"
           style={{ animationDelay: "200ms" }}
         >
-          <p className="text-[11px] text-[oklch(0.35_0.01_250)]">
+          <p className="text-[11px] text-[oklch(0.55_0.01_250)]">
             Institutional flow analysis &middot; Congressional tracking &middot; AI signals
           </p>
         </div>

@@ -23,8 +23,12 @@ HAIKU_THRESHOLD = 50
 # Minimum Sonnet confidence to create a signal
 SIGNAL_THRESHOLD = 65
 
-# Premium floor — ignore flow under this amount
-MIN_PREMIUM = 25_000
+# Premium floor — lower for individual stocks, higher for indexes
+MIN_PREMIUM = 10_000
+
+# Index ETFs to de-prioritize (noisy, mostly hedging)
+INDEX_TICKERS = {"SPY", "QQQ", "IWM", "SPXW", "SPX", "DIA", "XSP"}
+INDEX_MIN_PREMIUM = 50_000  # higher bar for indexes
 
 
 class AIPipeline:
@@ -34,6 +38,26 @@ class AIPipeline:
         self.uw = uw
         self.analyst = analyst
         self.db = get_supabase()
+
+    def _log_activity(
+        self,
+        event_type: str,
+        ticker: str | None = None,
+        details: dict | None = None,
+        ai_reasoning: str | None = None,
+        confidence_score: float | None = None,
+    ) -> None:
+        """Log an event to the ai_activity table."""
+        try:
+            self.db.table("ai_activity").insert({
+                "event_type": event_type,
+                "ticker": ticker,
+                "details": details or {},
+                "ai_reasoning": ai_reasoning,
+                "confidence_score": confidence_score,
+            }).execute()
+        except Exception:
+            logger.warning("Failed to log activity: %s %s", event_type, ticker)
 
     async def run_flow_scan(self) -> int:
         """Pull latest flow alerts, screen with Haiku, analyze with Sonnet.
@@ -48,12 +72,20 @@ class AIPipeline:
             logger.info("No flow alerts returned")
             return 0
 
-        # Filter by minimum premium
-        alerts = [
-            a for a in alerts
-            if float(a.get("total_premium", 0)) >= MIN_PREMIUM
-        ]
-        logger.info("Processing %d flow alerts (premium >= $%d)", len(alerts), MIN_PREMIUM)
+        # Filter by minimum premium — higher bar for index ETFs
+        filtered = []
+        for a in alerts:
+            ticker = a.get("ticker", "")
+            premium = float(a.get("total_premium", 0))
+            if ticker in INDEX_TICKERS:
+                if premium >= INDEX_MIN_PREMIUM:
+                    filtered.append(a)
+            else:
+                if premium >= MIN_PREMIUM:
+                    filtered.append(a)
+        alerts = filtered
+        logger.info("Processing %d flow alerts", len(alerts))
+        self._log_activity("scan_started", details={"alert_count": len(alerts), "type": "flow"})
 
         new_signals = 0
 
@@ -81,10 +113,23 @@ class AIPipeline:
                 continue
 
             initial_score = screen.get("initial_score", 0)
+            reasoning = screen.get("reasoning", "")
+
+            screen_tokens = screen.pop("_token_usage", None)
+
             if not screen.get("pass_to_deep_analysis", False) or initial_score < HAIKU_THRESHOLD:
-                logger.debug("SKIP %s — Haiku score %s", ticker, initial_score)
+                self._log_activity(
+                    "flow_rejected", ticker=ticker,
+                    details={"premium": float(alert.get("total_premium", 0)), "haiku_score": initial_score, "token_usage": screen_tokens},
+                    ai_reasoning=reasoning, confidence_score=initial_score,
+                )
                 continue
 
+            self._log_activity(
+                "flow_escalated", ticker=ticker,
+                details={"premium": float(alert.get("total_premium", 0)), "haiku_score": initial_score, "token_usage": screen_tokens},
+                ai_reasoning=f"Haiku escalated: {reasoning}", confidence_score=initial_score,
+            )
             logger.info("ESCALATE %s — Haiku score %s, sending to Sonnet", ticker, initial_score)
 
             # 3. Gather supporting data for deep analysis
@@ -110,9 +155,21 @@ class AIPipeline:
             direction = analysis.get("direction", "bullish")
             rec = analysis.get("recommended_trade", {})
 
+            # Auto-approve if in full_auto mode
+            config_row = self.db.table("bot_config").select("value").eq("key", "bot_mode").execute()
+            bot_mode = "manual_review"
+            if config_row.data:
+                bot_mode = str(config_row.data[0].get("value", "manual_review")).strip('"')
+
+            signal_status = "pending"
+            if bot_mode == "full_auto":
+                signal_status = "approved"
+            elif bot_mode == "semi_auto" and confidence >= 85:
+                signal_status = "approved"
+
             signal_data = {
                 "source": "flow",
-                "status": "pending",
+                "status": signal_status,
                 "ticker": ticker,
                 "direction": direction,
                 "confidence_score": confidence,
@@ -135,12 +192,30 @@ class AIPipeline:
 
             self.db.table("signals").insert(signal_data).execute()
             new_signals += 1
+
+            self._log_activity(
+                "signal_created", ticker=ticker,
+                details={
+                    "direction": direction,
+                    "action": rec.get("action", ""),
+                    "institutional_type": analysis.get("institutional_type", "unknown"),
+                },
+                ai_reasoning=analysis.get("thesis", "") or analysis.get("reasoning", ""),
+                confidence_score=confidence,
+            )
+
+            if signal_status == "approved":
+                self._log_activity(
+                    "signal_auto_approved", ticker=ticker,
+                    details={"mode": bot_mode, "direction": direction},
+                    ai_reasoning=f"Auto-approved in {bot_mode} mode (confidence {confidence})",
+                    confidence_score=confidence,
+                )
+
             logger.info(
-                "SIGNAL CREATED: %s %s (confidence=%s, thesis=%s)",
-                ticker,
-                direction,
-                confidence,
-                analysis.get("thesis", "")[:80],
+                "SIGNAL %s: %s %s (confidence=%s, status=%s)",
+                "AUTO-APPROVED" if signal_status == "approved" else "CREATED",
+                ticker, direction, confidence, signal_status,
             )
 
         logger.info("AI flow scan complete: %d new signals from %d alerts", new_signals, len(alerts))

@@ -1,13 +1,13 @@
 """Interactive Brokers broker adapter via ib_insync.
 
 Requires TWS Gateway running on ibkr_host:ibkr_port.
+Uses nest_asyncio to allow ib_insync's event loop inside asyncio.
 """
 
-import asyncio
 import logging
-from datetime import datetime, timezone
 
-from ib_insync import IB, Contract, Option, Order, Trade
+import nest_asyncio
+from ib_insync import IB, Option, Order, Trade
 
 from src.broker.base import (
     AccountBalance,
@@ -18,6 +18,9 @@ from src.broker.base import (
 )
 from src.config import settings
 
+# ib_insync needs its own event loop patching
+nest_asyncio.apply()
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,13 +29,10 @@ class IBKRBroker(BrokerAdapter):
         self._ib = IB()
 
     async def connect(self) -> None:
-        await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: self._ib.connect(
-                settings.ibkr_host,
-                settings.ibkr_port,
-                clientId=settings.ibkr_client_id,
-            ),
+        self._ib.connect(
+            settings.ibkr_host,
+            settings.ibkr_port,
+            clientId=settings.ibkr_client_id,
         )
         logger.info(
             "Connected to IBKR TWS Gateway at %s:%d",
@@ -44,7 +44,6 @@ class IBKRBroker(BrokerAdapter):
         logger.info("Disconnected from IBKR")
 
     def _make_option_contract(self, order: OptionOrder) -> Option:
-        """Build an IB Option contract from our OptionOrder."""
         right = "C" if order.call_put == "call" else "P"
         return Option(
             symbol=order.ticker,
@@ -58,10 +57,7 @@ class IBKRBroker(BrokerAdapter):
     async def place_option_order(self, order: OptionOrder) -> OrderResult:
         contract = self._make_option_contract(order)
 
-        # Qualify the contract first
-        qualified = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: self._ib.qualifyContracts(contract)
-        )
+        qualified = self._ib.qualifyContracts(contract)
         if not qualified:
             return OrderResult(
                 order_id="",
@@ -69,7 +65,6 @@ class IBKRBroker(BrokerAdapter):
                 message=f"Could not qualify contract: {order.ticker} {order.strike} {order.call_put} {order.expiry}",
             )
 
-        # Build IB order
         action = "BUY" if "buy" in order.action else "SELL"
         if order.order_type == "limit" and order.limit_price:
             ib_order = Order(
@@ -93,15 +88,18 @@ class IBKRBroker(BrokerAdapter):
             order.limit_price or "MKT",
         )
 
-        # Wait briefly for fill
-        await asyncio.sleep(2)
-        self._ib.sleep(0)  # process events
+        # Wait for fill
+        self._ib.sleep(3)
 
         fill_price = None
         commission = None
         if trade.fills:
             fill_price = trade.fills[0].execution.price
-            commission = sum(f.commissionReport.commission for f in trade.fills if f.commissionReport)
+            commission = sum(
+                f.commissionReport.commission
+                for f in trade.fills
+                if f.commissionReport
+            )
 
         return OrderResult(
             order_id=str(trade.order.orderId),
@@ -113,12 +111,13 @@ class IBKRBroker(BrokerAdapter):
         )
 
     async def get_positions(self) -> list[BrokerPosition]:
+        self._ib.sleep(0)  # process pending events
         positions = self._ib.positions()
         result: list[BrokerPosition] = []
 
         for pos in positions:
             contract = pos.contract
-            is_option = isinstance(contract, Option) or contract.secType == "OPT"
+            is_option = contract.secType == "OPT"
 
             bp = BrokerPosition(
                 ticker=contract.symbol,
@@ -128,7 +127,7 @@ class IBKRBroker(BrokerAdapter):
                 expiry=getattr(contract, "lastTradeDateOrContractMonth", None),
                 quantity=int(pos.position),
                 avg_cost=pos.avgCost / 100 if is_option else pos.avgCost,
-                current_price=None,  # will be updated via market data
+                current_price=None,
                 market_value=None,
                 unrealized_pnl=None,
             )
@@ -137,11 +136,15 @@ class IBKRBroker(BrokerAdapter):
         return result
 
     async def get_account_balance(self) -> AccountBalance:
+        self._ib.sleep(0)
         account_values = self._ib.accountSummary()
         vals: dict[str, float] = {}
         for av in account_values:
             if av.currency == "USD":
-                vals[av.tag] = float(av.value)
+                try:
+                    vals[av.tag] = float(av.value)
+                except (ValueError, TypeError):
+                    pass
 
         return AccountBalance(
             total_value=vals.get("NetLiquidation", 0),

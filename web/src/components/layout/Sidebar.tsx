@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutIcon },
-  { label: "Positions", href: "/dashboard/positions", icon: TrendingUpIcon },
+  { label: "AI Activity", href: "/dashboard/activity", icon: ActivityIcon },
   { label: "Signals", href: "/dashboard/signals", icon: ZapIcon },
+  { label: "Positions", href: "/dashboard/positions", icon: TrendingUpIcon },
   { label: "Trades", href: "/dashboard/trades", icon: ArrowRightLeftIcon },
+  { label: "Congress", href: "/dashboard/congress", icon: CongressIcon },
   { label: "Members", href: "/dashboard/members", icon: UsersIcon },
   { label: "Expenses", href: "/dashboard/expenses", icon: ReceiptIcon },
 ];
@@ -38,7 +40,7 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
       ? "bg-profit"
       : botStatus === "degraded"
         ? "bg-gold"
-        : "bg-[oklch(0.40_0.01_250)]";
+        : "bg-[oklch(0.70_0.01_250)]";
   const botLabel =
     botStatus === "healthy"
       ? "Online"
@@ -69,7 +71,7 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
             <p className="text-[13px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
               Skidaway
             </p>
-            <p className="text-[9px] font-medium tracking-[0.15em] uppercase text-[oklch(0.40_0.01_250)]">
+            <p className="text-[9px] font-medium tracking-[0.15em] uppercase text-[oklch(0.60_0.01_250)]">
               Trading
             </p>
           </div>
@@ -78,10 +80,10 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
 
       {/* Bot status pill */}
       <div className="mx-4 mb-4">
-        <div className="flex items-center gap-2 rounded-md bg-[oklch(0.10_0.010_250)] border border-sidebar-border px-3 py-2">
+        <div className="flex items-center gap-2 rounded-md bg-[oklch(0.95_0.006_175)] border border-sidebar-border px-3 py-2">
           <div className={cn("h-1.5 w-1.5 rounded-full", botColor, botStatus === "healthy" && "animate-pulse-live")} />
           <span className="text-[10px] font-mono text-[oklch(0.50_0.01_250)]">
-            Bot: <span className={botStatus === "healthy" ? "text-profit" : botStatus === "degraded" ? "text-gold" : "text-[oklch(0.40_0.01_250)]"}>{botLabel}</span>
+            Bot: <span className={botStatus === "healthy" ? "text-profit" : botStatus === "degraded" ? "text-gold" : "text-[oklch(0.60_0.01_250)]"}>{botLabel}</span>
           </span>
         </div>
       </div>
@@ -101,13 +103,13 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
                 "flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150",
                 isActive
                   ? "bg-sidebar-accent text-teal"
-                  : "text-[oklch(0.50_0.015_250)] hover:text-sidebar-foreground hover:bg-[oklch(0.12_0.010_250)]"
+                  : "text-[oklch(0.55_0.015_250)] hover:text-sidebar-foreground hover:bg-[oklch(0.94_0.006_90)]"
               )}
             >
               <item.icon className="h-[15px] w-[15px]" />
               {item.label}
               {item.label === "Signals" && (
-                <span className="ml-auto text-[9px] font-mono text-gold bg-[oklch(0.78_0.14_85_/_0.08)] border border-[oklch(0.78_0.14_85_/_0.2)] rounded px-1 py-0.5 leading-none">
+                <span className="ml-auto text-[9px] font-mono text-gold bg-[oklch(0.65_0.16_85_/_0.10)] border border-[oklch(0.65_0.16_85_/_0.25)] rounded px-1 py-0.5 leading-none">
                   AI
                 </span>
               )}
@@ -120,7 +122,7 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
       <div className="border-t border-sidebar-border px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex-shrink-0 w-7 h-7 rounded-md bg-[oklch(0.72_0.15_175_/_0.10)] border border-[oklch(0.72_0.15_175_/_0.2)] flex items-center justify-center">
+            <div className="flex-shrink-0 w-7 h-7 rounded-md bg-[oklch(0.55_0.18_175_/_0.10)] border border-[oklch(0.55_0.18_175_/_0.25)] flex items-center justify-center">
               <span className="text-[10px] font-bold text-teal">
                 {profile?.display_name?.[0]?.toUpperCase() ?? "?"}
               </span>
@@ -129,14 +131,14 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
               <p className="text-[12px] font-medium text-sidebar-foreground truncate">
                 {profile?.display_name ?? "User"}
               </p>
-              <p className="text-[9px] font-mono text-[oklch(0.40_0.01_250)] uppercase">
+              <p className="text-[9px] font-mono text-[oklch(0.60_0.01_250)] uppercase">
                 {profile?.role ?? "viewer"}
               </p>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="text-[10px] text-[oklch(0.40_0.01_250)] hover:text-sidebar-foreground transition-colors"
+            className="text-[10px] text-[oklch(0.60_0.01_250)] hover:text-sidebar-foreground transition-colors"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -197,6 +199,26 @@ function UsersIcon({ className }: { className?: string }) {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function ActivityIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  );
+}
+
+function CongressIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 20h20" />
+      <path d="M5 20V8l7-5 7 5v12" />
+      <path d="M9 20v-4h6v4" />
+      <path d="M9 12h.01" />
+      <path d="M15 12h.01" />
     </svg>
   );
 }

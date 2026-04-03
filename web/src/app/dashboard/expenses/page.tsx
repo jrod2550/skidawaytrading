@@ -77,6 +77,9 @@ export default function ExpensesPage() {
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split("T")[0]);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState<string>("");
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -150,16 +153,7 @@ export default function ExpensesPage() {
     });
 
     if (!error) {
-      // Refresh data
-      const { data: exp } = await supabase
-        .from("expenses")
-        .select("*")
-        .order("expense_date", { ascending: false })
-        .limit(100);
-      if (exp) setExpenses(exp);
-
-      const { data: sum } = await supabase.from("expense_summary").select("*");
-      if (sum) setSummary(sum);
+      await refreshData();
 
       // Reset form
       setDescription("");
@@ -169,6 +163,36 @@ export default function ExpensesPage() {
     }
 
     setSubmitting(false);
+  }
+
+  async function refreshData() {
+    const { data: exp } = await supabase
+      .from("expenses")
+      .select("*")
+      .order("expense_date", { ascending: false })
+      .limit(100);
+    if (exp) setExpenses(exp);
+
+    const { data: sum } = await supabase.from("expense_summary").select("*");
+    if (sum) setSummary(sum);
+  }
+
+  async function handleDelete(expense: Expense) {
+    setDeleting(expense.id);
+
+    // Delete receipt from storage if it exists
+    if (expense.receipt_url) {
+      const path = expense.receipt_url.split("/receipts/").pop();
+      if (path) {
+        await supabase.storage.from("receipts").remove([decodeURIComponent(path)]);
+      }
+    }
+
+    const { error } = await supabase.from("expenses").delete().eq("id", expense.id);
+    if (!error) {
+      await refreshData();
+    }
+    setDeleting(null);
   }
 
   // Group summary by month
@@ -328,12 +352,50 @@ export default function ExpensesPage() {
         </Card>
       </div>
 
+      {/* Attachment preview dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) setPreviewUrl(null); }}>
+        <DialogContent className="bg-card border-border max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-medium">{previewName}</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <div className="space-y-3">
+              {previewUrl.match(/\.(png|jpg|jpeg|webp|gif)$/i) ? (
+                <img
+                  src={previewUrl}
+                  alt={previewName}
+                  className="w-full rounded-lg border border-border"
+                />
+              ) : previewUrl.match(/\.pdf$/i) ? (
+                <iframe
+                  src={previewUrl}
+                  className="w-full h-[500px] rounded-lg border border-border"
+                  title={previewName}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Preview not available for this file type.
+                </p>
+              )}
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-teal hover:underline"
+              >
+                Open in new tab
+              </a>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Expense table */}
       <Card className="bg-card border-border">
         <CardContent className="pt-6">
           {expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-12 h-12 rounded-full bg-[oklch(0.14_0.012_250)] border border-border flex items-center justify-center mb-3">
+              <div className="w-12 h-12 rounded-full bg-[oklch(0.95_0.006_90)] border border-border flex items-center justify-center mb-3">
                 <svg className="w-6 h-6 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" strokeLinecap="round" strokeLinejoin="round" />
@@ -342,7 +404,7 @@ export default function ExpensesPage() {
               </div>
               <p className="text-sm text-muted-foreground">No expenses recorded yet</p>
               {isAdmin && (
-                <p className="text-[10px] text-[oklch(0.35_0.01_250)] mt-1">
+                <p className="text-[10px] text-[oklch(0.60_0.01_250)] mt-1">
                   Click &quot;Add Expense&quot; to log API costs, infrastructure, etc.
                 </p>
               )}
@@ -356,6 +418,7 @@ export default function ExpensesPage() {
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Receipt</TableHead>
+                  {isAdmin && <TableHead className="w-10"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -375,18 +438,46 @@ export default function ExpensesPage() {
                     </TableCell>
                     <TableCell>
                       {exp.receipt_url ? (
-                        <a
-                          href={exp.receipt_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-teal hover:underline"
+                        <button
+                          onClick={() => {
+                            setPreviewUrl(exp.receipt_url);
+                            setPreviewName(exp.receipt_filename ?? "Receipt");
+                          }}
+                          className="inline-flex items-center gap-1.5 text-xs text-teal hover:underline"
                         >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                          </svg>
                           {exp.receipt_filename ?? "View"}
-                        </a>
+                        </button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <button
+                          onClick={() => handleDelete(exp)}
+                          disabled={deleting === exp.id}
+                          className="text-muted-foreground hover:text-loss transition-colors disabled:opacity-50"
+                          title="Delete expense"
+                        >
+                          {deleting === exp.id ? (
+                            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
+                          )}
+                        </button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
