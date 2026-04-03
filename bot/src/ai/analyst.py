@@ -18,8 +18,8 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-HAIKU = "claude-3-5-haiku-20241022"
-SONNET = "claude-3-5-sonnet-20241022"
+HAIKU = "claude-haiku-4-5-20251001"
+SONNET = "claude-sonnet-4-5-20250514"
 
 SYSTEM_PROMPT = """You are a senior quantitative options flow analyst at Skidaway Trading, an institutional-style options fund.
 

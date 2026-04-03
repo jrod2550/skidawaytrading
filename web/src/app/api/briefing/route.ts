@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const UW_BASE = "https://api.unusualwhales.com";
-const SONNET = "claude-3-5-sonnet-20241022";
+const SONNET = "claude-sonnet-4-5-20250514";
 
 async function uwFetch(path: string, apiKey: string) {
   const resp = await fetch(`${UW_BASE}${path}`, {
@@ -205,24 +205,42 @@ Rules:
 - If data is sparse or market is closed, say so honestly — don't fabricate narrative
 - Cite "Unusual Whales flow data" or "congressional disclosure filings" when referencing sources`;
 
-    const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: SONNET,
-        max_tokens: 1500,
-        system: systemPrompt,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    // Try latest Sonnet first, fallback to older if not available
+    const MODELS = [SONNET, "claude-3-5-sonnet-20241022"];
+    let claudeResp: Response | null = null;
+    let usedModel = SONNET;
 
-    if (!claudeResp.ok) {
-      const err = await claudeResp.text();
-      return NextResponse.json({ error: `Claude API error: ${err}` }, { status: 500 });
+    for (const model of MODELS) {
+      claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1500,
+          system: systemPrompt,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (claudeResp.ok) {
+        usedModel = model;
+        break;
+      }
+
+      // If not_found error, try next model
+      const errText = await claudeResp.text();
+      if (errText.includes("not_found") && model !== MODELS[MODELS.length - 1]) {
+        continue;
+      }
+      return NextResponse.json({ error: `Claude API error: ${errText}` }, { status: 500 });
+    }
+
+    if (!claudeResp || !claudeResp.ok) {
+      return NextResponse.json({ error: "All Claude models failed" }, { status: 500 });
     }
 
     const claudeData = await claudeResp.json();
@@ -237,7 +255,7 @@ Rules:
 
     return NextResponse.json({
       briefing: briefingText,
-      model: SONNET,
+      model: usedModel,
       market_status: marketCtx.status,
       generated_at: new Date().toISOString(),
       token_usage: {
