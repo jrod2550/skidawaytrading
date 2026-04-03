@@ -9,12 +9,13 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutIcon },
+  { label: "Strategy", href: "/dashboard/strategy", icon: StrategyIcon },
+  { label: "Positions", href: "/dashboard/positions", icon: TrendingUpIcon },
+  { label: "Trades", href: "/dashboard/trades", icon: ArrowRightLeftIcon },
+  { label: "Signals", href: "/dashboard/signals", icon: ZapIcon },
   { label: "AI Briefing", href: "/dashboard/briefing", icon: BriefingIcon },
   { label: "Whale Alerts", href: "/dashboard/whales", icon: WhaleIcon },
   { label: "AI Activity", href: "/dashboard/activity", icon: ActivityIcon },
-  { label: "Signals", href: "/dashboard/signals", icon: ZapIcon },
-  { label: "Positions", href: "/dashboard/positions", icon: TrendingUpIcon },
-  { label: "Trades", href: "/dashboard/trades", icon: ArrowRightLeftIcon },
   { label: "Congress", href: "/dashboard/congress", icon: CongressIcon },
   { label: "Members", href: "/dashboard/members", icon: UsersIcon },
   { label: "Expenses", href: "/dashboard/expenses", icon: ReceiptIcon },
@@ -233,6 +234,17 @@ function ReceiptIcon({ className }: { className?: string }) {
       <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
       <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
       <path d="M12 17.5v-11" />
+    </svg>
+  );
+}
+
+function StrategyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20V10" />
+      <path d="M18 20V4" />
+      <path d="M6 20v-4" />
+      <path d="M2 20h20" />
     </svg>
   );
 }

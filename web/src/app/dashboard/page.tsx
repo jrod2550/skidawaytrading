@@ -328,6 +328,7 @@ export default function DashboardOverview() {
                     {market.market_status === "open" ? "MARKET OPEN" :
                      market.market_status === "pre-market" ? "PRE-MARKET" :
                      market.market_status === "after-hours" ? "AFTER HOURS" :
+                     market.market_status === "holiday" ? "HOLIDAY — CLOSED" :
                      "MARKET CLOSED"}
                     {" "}· {market.market_time} ET
                   </span>

@@ -33,16 +33,45 @@ export async function GET() {
     const minute = eastern.getMinutes();
     const day = eastern.getDay();
     const timeMinutes = hour * 60 + minute;
+    const year = eastern.getFullYear();
+    const month = eastern.getMonth() + 1;
+    const date = eastern.getDate();
+    const mmdd = `${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
+
+    // US market holidays (fixed dates + observed rules)
+    // Variable holidays need to be updated yearly or computed
+    const fixedHolidays: Record<number, string[]> = {
+      2026: [
+        "01-01", // New Year's
+        "01-19", // MLK Day
+        "02-16", // Presidents Day
+        "04-03", // Good Friday
+        "05-25", // Memorial Day
+        "06-19", // Juneteenth
+        "07-03", // Independence Day (observed)
+        "09-07", // Labor Day
+        "11-26", // Thanksgiving
+        "12-25", // Christmas
+      ],
+      2027: [
+        "01-01", "01-18", "02-15", "03-26", "05-31",
+        "06-18", "07-05", "09-06", "11-25", "12-24",
+      ],
+    };
+    const holidays = fixedHolidays[year] ?? fixedHolidays[2026];
+    const isHoliday = holidays.includes(mmdd);
 
     const isWeekday = day >= 1 && day <= 5;
-    const preMarket = isWeekday && timeMinutes >= 240 && timeMinutes < 570; // 4:00-9:30
-    const marketOpen = isWeekday && timeMinutes >= 570 && timeMinutes < 960; // 9:30-16:00
-    const afterHours = isWeekday && timeMinutes >= 960 && timeMinutes < 1200; // 16:00-20:00
+    const isTradingDay = isWeekday && !isHoliday;
+    const preMarket = isTradingDay && timeMinutes >= 240 && timeMinutes < 570; // 4:00-9:30
+    const marketOpen = isTradingDay && timeMinutes >= 570 && timeMinutes < 960; // 9:30-16:00
+    const afterHours = isTradingDay && timeMinutes >= 960 && timeMinutes < 1200; // 16:00-20:00
 
     let marketStatus = "closed";
     if (marketOpen) marketStatus = "open";
     else if (preMarket) marketStatus = "pre-market";
     else if (afterHours) marketStatus = "after-hours";
+    if (isHoliday) marketStatus = "holiday";
 
     // Get top flow by premium (limit to 8 most interesting)
     const topFlow = Array.isArray(flowAlerts)
