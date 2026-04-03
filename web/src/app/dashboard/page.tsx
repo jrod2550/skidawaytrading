@@ -182,6 +182,31 @@ function SourceIcon({ source }: { source: string }) {
 
 /* ── Dashboard Page ─────────────────────────────────────── */
 
+interface FlowAlert {
+  ticker: string;
+  strike: number;
+  call_put: string;
+  expiry: string;
+  premium: number;
+  volume: number;
+  open_interest: number;
+  sentiment: string;
+  is_sweep: boolean;
+}
+
+interface SectorData {
+  name: string;
+  ticker: string;
+  change_pct: number;
+}
+
+interface MarketData {
+  market_status: string;
+  market_time: string;
+  top_flow: FlowAlert[];
+  sectors: SectorData[];
+}
+
 export default function DashboardOverview() {
   const supabase = createClient();
   const [snapshot, setSnapshot] = useState<PoolSnapshot | null>(null);
@@ -189,6 +214,7 @@ export default function DashboardOverview() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [pendingSignals, setPendingSignals] = useState<Signal[]>([]);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
+  const [market, setMarket] = useState<MarketData | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -228,6 +254,17 @@ export default function DashboardOverview() {
       if (posRes.data) setPositions(posRes.data);
       if (sigRes.data) setPendingSignals(sigRes.data);
       if (tradeRes.data) setRecentTrades(tradeRes.data);
+
+      // Fetch market data from UW API route
+      try {
+        const marketResp = await fetch("/api/market");
+        if (marketResp.ok) {
+          const marketData = await marketResp.json();
+          setMarket(marketData);
+        }
+      } catch {
+        // API route may fail silently
+      }
     }
 
     load();
@@ -276,6 +313,26 @@ export default function DashboardOverview() {
                 <div className="h-1.5 w-1.5 rounded-full bg-teal animate-pulse-live" />
                 <span className="text-[10px] text-teal font-mono">LIVE</span>
               </div>
+              {market && (
+                <div className="flex items-center gap-1.5">
+                  <div className={`h-1.5 w-1.5 rounded-full ${
+                    market.market_status === "open" ? "bg-profit animate-pulse-live" :
+                    market.market_status === "pre-market" || market.market_status === "after-hours" ? "bg-gold" :
+                    "bg-muted-foreground"
+                  }`} />
+                  <span className={`text-[10px] font-mono ${
+                    market.market_status === "open" ? "text-profit" :
+                    market.market_status === "pre-market" || market.market_status === "after-hours" ? "text-gold" :
+                    "text-muted-foreground"
+                  }`}>
+                    {market.market_status === "open" ? "MARKET OPEN" :
+                     market.market_status === "pre-market" ? "PRE-MARKET" :
+                     market.market_status === "after-hours" ? "AFTER HOURS" :
+                     "MARKET CLOSED"}
+                    {" "}· {market.market_time} ET
+                  </span>
+                </div>
+              )}
             </div>
             <p className="text-[2.5rem] font-semibold tracking-[-0.03em] leading-none animate-count font-mono">
               {fmtCurrency(snapshot?.total_value ?? null)}
@@ -567,6 +624,132 @@ export default function DashboardOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Market Intelligence ────────────────────── */}
+      {market && (market.top_flow.length > 0 || market.sectors.length > 0) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Top Unusual Flow */}
+          {market.top_flow.length > 0 && (
+            <Card className="bg-card border-border">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[11px] font-medium tracking-[0.15em] uppercase text-sand">
+                    Top Unusual Flow
+                  </h3>
+                  <span className="text-[10px] font-mono text-muted-foreground">
+                    via Unusual Whales
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {market.top_flow.map((flow, i) => (
+                    <div
+                      key={`${flow.ticker}-${flow.strike}-${i}`}
+                      className="flex items-center justify-between rounded-lg bg-[oklch(0.97_0.003_90)] border border-[oklch(0.92_0.006_90)] px-3 py-2 hover:border-[oklch(0.82_0.010_175)] transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-mono font-bold border ${
+                            String(flow.call_put).toLowerCase().includes("call")
+                              ? "bg-[oklch(0.50_0.20_155_/_0.08)] text-profit border-[oklch(0.50_0.20_155_/_0.2)]"
+                              : "bg-[oklch(0.52_0.22_25_/_0.08)] text-loss border-[oklch(0.52_0.22_25_/_0.2)]"
+                          }`}
+                        >
+                          {String(flow.call_put).toLowerCase().includes("call") ? "C" : "P"}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-semibold">{flow.ticker}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                              ${flow.strike} {flow.expiry}
+                            </span>
+                            {flow.is_sweep && (
+                              <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-gold text-gold">
+                                SWEEP
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[10px] font-mono text-muted-foreground">
+                            vol: {flow.volume.toLocaleString()} · OI: {flow.open_interest.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-mono font-semibold text-gold">
+                          ${(flow.premium / 1000).toFixed(0)}k
+                        </p>
+                        <p className={`text-[10px] font-mono ${
+                          flow.sentiment === "bullish" ? "text-profit" : "text-loss"
+                        }`}>
+                          {flow.sentiment}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sector Performance */}
+          {market.sectors.length > 0 && (
+            <Card className="bg-card border-border">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[11px] font-medium tracking-[0.15em] uppercase text-sand">
+                    Sector Performance
+                  </h3>
+                  <span className="text-[10px] font-mono text-muted-foreground">
+                    today
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {market.sectors.map((sector) => {
+                    const isPositive = sector.change_pct >= 0;
+                    const absChange = Math.abs(sector.change_pct);
+                    const maxBar = 3; // normalize bar width to ~3% max
+                    const barWidth = Math.min((absChange / maxBar) * 100, 100);
+
+                    return (
+                      <div
+                        key={sector.ticker}
+                        className="flex items-center gap-3 rounded-md px-3 py-2"
+                      >
+                        <span className="text-xs font-mono text-muted-foreground w-10 flex-shrink-0">
+                          {sector.ticker}
+                        </span>
+                        <span className="text-xs w-28 truncate flex-shrink-0">
+                          {sector.name}
+                        </span>
+                        <div className="flex-1 h-4 relative">
+                          <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
+                          {isPositive ? (
+                            <div
+                              className="absolute left-1/2 top-0.5 bottom-0.5 rounded-r bg-profit/20"
+                              style={{ width: `${barWidth / 2}%` }}
+                            />
+                          ) : (
+                            <div
+                              className="absolute right-1/2 top-0.5 bottom-0.5 rounded-l bg-loss/20"
+                              style={{ width: `${barWidth / 2}%` }}
+                            />
+                          )}
+                        </div>
+                        <span
+                          className={`text-xs font-mono font-medium w-14 text-right flex-shrink-0 ${
+                            isPositive ? "text-profit" : "text-loss"
+                          }`}
+                        >
+                          {isPositive ? "+" : ""}{sector.change_pct.toFixed(2)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
