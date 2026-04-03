@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutIcon },
+  { label: "AI Briefing", href: "/dashboard/briefing", icon: BriefingIcon },
+  { label: "Whale Alerts", href: "/dashboard/whales", icon: WhaleIcon },
   { label: "AI Activity", href: "/dashboard/activity", icon: ActivityIcon },
   { label: "Signals", href: "/dashboard/signals", icon: ZapIcon },
   { label: "Positions", href: "/dashboard/positions", icon: TrendingUpIcon },
@@ -231,6 +233,29 @@ function ReceiptIcon({ className }: { className?: string }) {
       <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
       <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
       <path d="M12 17.5v-11" />
+    </svg>
+  );
+}
+
+function BriefingIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </svg>
+  );
+}
+
+function WhaleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 6c-3.5 0-6.5 2-8 5 1.5 3 4.5 5 8 5s6.5-2 8-5c-1.5-3-4.5-5-8-5Z" />
+      <circle cx="12" cy="11" r="2" />
+      <path d="M2 11s1-2 3-2" />
+      <path d="M22 11s-1-2-3-2" />
     </svg>
   );
 }
