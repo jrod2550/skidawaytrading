@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const UW_BASE = "https://api.unusualwhales.com";
-const SONNET = "claude-sonnet-4-5-20241022";
+const SONNET = "claude-3-5-sonnet-20241022";
 
 async function uwFetch(path: string, apiKey: string) {
   const resp = await fetch(`${UW_BASE}${path}`, {
