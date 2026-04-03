@@ -80,6 +80,9 @@ export default function ExpensesPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState<string>("");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -193,6 +196,38 @@ export default function ExpensesPage() {
       await refreshData();
     }
     setDeleting(null);
+  }
+
+  async function handleUpdateAmount(expenseId: string) {
+    const parsed = parseFloat(editAmount);
+    if (isNaN(parsed) || parsed <= 0) return;
+    await supabase.from("expenses").update({ amount: parsed }).eq("id", expenseId);
+    setEditingId(null);
+    setEditAmount("");
+    await refreshData();
+  }
+
+  async function handleAttachReceipt(expenseId: string, file: File) {
+    setUploading(expenseId);
+    const ext = file.name.split(".").pop();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("receipts")
+      .upload(path, file);
+
+    if (!uploadError && uploadData) {
+      const { data: urlData } = supabase.storage
+        .from("receipts")
+        .getPublicUrl(uploadData.path);
+
+      await supabase
+        .from("expenses")
+        .update({ receipt_url: urlData.publicUrl, receipt_filename: file.name })
+        .eq("id", expenseId);
+
+      await refreshData();
+    }
+    setUploading(null);
   }
 
   // Group summary by month
@@ -360,13 +395,13 @@ export default function ExpensesPage() {
           </DialogHeader>
           {previewUrl && (
             <div className="space-y-3">
-              {previewUrl.match(/\.(png|jpg|jpeg|webp|gif)$/i) ? (
+              {previewName.match(/\.(png|jpg|jpeg|webp|gif)$/i) || previewUrl.match(/\.(png|jpg|jpeg|webp|gif)/i) ? (
                 <img
                   src={previewUrl}
                   alt={previewName}
                   className="w-full rounded-lg border border-border"
                 />
-              ) : previewUrl.match(/\.pdf$/i) ? (
+              ) : previewName.match(/\.pdf$/i) || previewUrl.match(/\.pdf/i) ? (
                 <iframe
                   src={previewUrl}
                   className="w-full h-[500px] rounded-lg border border-border"
@@ -434,23 +469,81 @@ export default function ExpensesPage() {
                     </TableCell>
                     <TableCell className="text-sm">{exp.description}</TableCell>
                     <TableCell className="text-right font-mono font-medium">
-                      {fmtCurrency(exp.amount)}
+                      {isAdmin && editingId === exp.id ? (
+                        <form
+                          onSubmit={(e) => { e.preventDefault(); handleUpdateAmount(exp.id); }}
+                          className="flex items-center justify-end gap-1"
+                        >
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editAmount}
+                            onChange={(e) => setEditAmount(e.target.value)}
+                            autoFocus
+                            onBlur={() => { setEditingId(null); setEditAmount(""); }}
+                            onKeyDown={(e) => { if (e.key === "Escape") { setEditingId(null); setEditAmount(""); } }}
+                            className="w-24 h-7 text-right text-sm font-mono border border-teal rounded px-2 bg-background outline-none"
+                          />
+                        </form>
+                      ) : (
+                        <button
+                          onClick={() => { if (isAdmin) { setEditingId(exp.id); setEditAmount(String(exp.amount)); } }}
+                          className={isAdmin ? "hover:text-teal transition-colors cursor-pointer" : "cursor-default"}
+                          title={isAdmin ? "Click to edit" : undefined}
+                        >
+                          {fmtCurrency(exp.amount)}
+                        </button>
+                      )}
                     </TableCell>
                     <TableCell>
                       {exp.receipt_url ? (
-                        <button
-                          onClick={() => {
-                            setPreviewUrl(exp.receipt_url);
-                            setPreviewName(exp.receipt_filename ?? "Receipt");
-                          }}
-                          className="inline-flex items-center gap-1.5 text-xs text-teal hover:underline"
-                        >
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setPreviewUrl(exp.receipt_url);
+                              setPreviewName(exp.receipt_filename ?? "Receipt");
+                            }}
+                            className="inline-flex items-center gap-1.5 text-xs text-teal hover:underline"
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                              <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                            </svg>
+                            {exp.receipt_filename ?? "View"}
+                          </button>
+                          {isAdmin && (
+                            <label className="text-[10px] text-muted-foreground hover:text-teal cursor-pointer transition-colors">
+                              replace
+                              <input
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleAttachReceipt(exp.id, f);
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      ) : isAdmin ? (
+                        <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-teal cursor-pointer transition-colors">
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" x2="12" y1="3" y2="15" />
                           </svg>
-                          {exp.receipt_filename ?? "View"}
-                        </button>
+                          {uploading === exp.id ? "Uploading..." : "Attach"}
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg,.webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleAttachReceipt(exp.id, f);
+                            }}
+                          />
+                        </label>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}

@@ -146,9 +146,17 @@ class AIPipeline:
             if analysis.get("error"):
                 continue
 
+            analysis_tokens = analysis.pop("_token_usage", None)
+
             confidence = analysis.get("confidence_score", 0)
             if confidence < SIGNAL_THRESHOLD:
                 logger.info("BELOW THRESHOLD %s — Sonnet confidence %s", ticker, confidence)
+                self._log_activity(
+                    "deep_analysis", ticker=ticker,
+                    details={"sonnet_confidence": confidence, "below_threshold": True, "token_usage": analysis_tokens},
+                    ai_reasoning=analysis.get("reasoning", analysis.get("thesis", "")),
+                    confidence_score=confidence,
+                )
                 continue
 
             # 5. Create signal in Supabase
@@ -199,6 +207,9 @@ class AIPipeline:
                     "direction": direction,
                     "action": rec.get("action", ""),
                     "institutional_type": analysis.get("institutional_type", "unknown"),
+                    "risk_factors": analysis.get("risk_factors", []),
+                    "recommended_trade": rec,
+                    "token_usage": analysis_tokens,
                 },
                 ai_reasoning=analysis.get("thesis", "") or analysis.get("reasoning", ""),
                 confidence_score=confidence,
