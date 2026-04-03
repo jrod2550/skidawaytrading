@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 
 interface Briefing {
   briefing: string;
+  model: string;
+  market_status: string;
   generated_at: string;
   token_usage: {
     input_tokens: number;
@@ -13,7 +15,8 @@ interface Briefing {
     estimated_cost: string;
   };
   data_summary: {
-    flow_alerts_analyzed: number;
+    individual_flow: number;
+    index_flow: number;
     congressional_trades: number;
     sectors_tracked: number;
   };
@@ -85,19 +88,41 @@ export default function BriefingPage() {
       {briefing && (
         <>
           {/* Meta info */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
-                  Flow Analyzed
+                  Market
                 </p>
-                <p className="text-xl font-bold font-mono">{briefing.data_summary.flow_alerts_analyzed}</p>
+                <p className={`text-sm font-bold font-mono ${
+                  briefing.market_status === "open" ? "text-profit" :
+                  briefing.market_status === "holiday" ? "text-loss" :
+                  "text-muted-foreground"
+                }`}>
+                  {briefing.market_status === "holiday" ? "Holiday" : briefing.market_status?.toUpperCase()}
+                </p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
-                  Congress Trades
+                  Stock Flow
+                </p>
+                <p className="text-xl font-bold font-mono">{briefing.data_summary.individual_flow}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
+                  Index Flow
+                </p>
+                <p className="text-xl font-bold font-mono">{briefing.data_summary.index_flow}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card border-border">
+              <CardContent className="p-4">
+                <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
+                  Congress
                 </p>
                 <p className="text-xl font-bold font-mono">{briefing.data_summary.congressional_trades}</p>
               </CardContent>
@@ -105,9 +130,9 @@ export default function BriefingPage() {
             <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
-                  Sectors
+                  Model
                 </p>
-                <p className="text-xl font-bold font-mono">{briefing.data_summary.sectors_tracked}</p>
+                <p className="text-sm font-bold font-mono text-teal">Sonnet</p>
               </CardContent>
             </Card>
             <Card className="bg-card border-border">
@@ -132,8 +157,8 @@ export default function BriefingPage() {
                 <div>
                   <p className="text-sm font-semibold">Skidaway AI Analyst</p>
                   <p className="text-[10px] text-muted-foreground font-mono">
-                    Generated {new Date(briefing.generated_at).toLocaleString()} ·{" "}
-                    {briefing.token_usage.input_tokens + briefing.token_usage.output_tokens} tokens
+                    {new Date(briefing.generated_at).toLocaleString()} · Claude Sonnet ·{" "}
+                    {briefing.token_usage.input_tokens + briefing.token_usage.output_tokens} tokens · ${briefing.token_usage.estimated_cost}
                   </p>
                 </div>
               </div>
