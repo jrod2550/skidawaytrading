@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Sidebar from "@/components/layout/Sidebar";
 import type { Profile, BotHeartbeat } from "@/lib/types/trading";
 
@@ -43,7 +44,7 @@ export default function DashboardShell({
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         {/* Mobile header */}
-        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/95 backdrop-blur px-4 py-3 lg:hidden">
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-teal/20 bg-background/95 backdrop-blur px-4 py-3 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-muted transition-colors"
@@ -54,6 +55,7 @@ export default function DashboardShell({
               <line x1="4" x2="20" y1="18" y2="18" />
             </svg>
           </button>
+          <Image src="/logo.webp" alt="Skidaway" width={24} height={24} className="rounded" />
           <span className="text-sm font-semibold tracking-tight">Skidaway Trading</span>
         </div>
 

@@ -154,6 +154,42 @@ export default function StrategyPage() {
         )}
       </div>
 
+      {/* Risk Profile Presets */}
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <h3 className="text-sm font-semibold mb-1">Risk Profile</h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Quick presets — or customize individual settings below
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <button
+              disabled={!isAdmin}
+              onClick={() => { setMaxPositionPct("2"); setMaxPortfolioRisk("10"); setMaxSingleLoss("15"); setMinConfidence("75"); setMaxDailyTrades("5"); }}
+              className="rounded-xl border-2 border-border hover:border-teal/30 p-4 text-left transition-all disabled:opacity-60"
+            >
+              <p className="text-sm font-semibold text-profit mb-1">Conservative</p>
+              <p className="text-xs text-muted-foreground">2% max position, 10% portfolio risk, 75+ confidence only. Fewer trades, tighter stops.</p>
+            </button>
+            <button
+              disabled={!isAdmin}
+              onClick={() => { setMaxPositionPct("5"); setMaxPortfolioRisk("25"); setMaxSingleLoss("30"); setMinConfidence("65"); setMaxDailyTrades("10"); }}
+              className="rounded-xl border-2 border-border hover:border-gold/30 p-4 text-left transition-all disabled:opacity-60"
+            >
+              <p className="text-sm font-semibold text-gold mb-1">Moderate</p>
+              <p className="text-xs text-muted-foreground">5% max position, 25% portfolio risk, 65+ confidence. Balanced risk/reward.</p>
+            </button>
+            <button
+              disabled={!isAdmin}
+              onClick={() => { setMaxPositionPct("10"); setMaxPortfolioRisk("50"); setMaxSingleLoss("50"); setMinConfidence("55"); setMaxDailyTrades("20"); }}
+              className="rounded-xl border-2 border-border hover:border-loss/30 p-4 text-left transition-all disabled:opacity-60"
+            >
+              <p className="text-sm font-semibold text-loss mb-1">Aggressive</p>
+              <p className="text-xs text-muted-foreground">10% max position, 50% portfolio risk, 55+ confidence. More trades, wider stops. High risk.</p>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Trading Mode */}
       <Card className="bg-card border-border">
         <CardContent className="p-6">
