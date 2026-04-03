@@ -25,17 +25,33 @@ export async function GET() {
     ]);
 
     // Determine market status based on current time (US Eastern)
+    // Use Intl.DateTimeFormat for reliable timezone conversion on Vercel
     const now = new Date();
-    const eastern = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/New_York" })
-    );
-    const hour = eastern.getHours();
-    const minute = eastern.getMinutes();
-    const day = eastern.getDay();
+    const etParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(now);
+
+    const getPart = (type: string) => etParts.find((p) => p.type === type)?.value ?? "0";
+    const hour = parseInt(getPart("hour"));
+    const minute = parseInt(getPart("minute"));
+    const year = parseInt(getPart("year"));
+    const month = parseInt(getPart("month"));
+    const date = parseInt(getPart("day"));
+
+    // Get day of week in ET
+    const etDayStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      weekday: "short",
+    }).format(now);
+    const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const day = dayMap[etDayStr] ?? 0;
     const timeMinutes = hour * 60 + minute;
-    const year = eastern.getFullYear();
-    const month = eastern.getMonth() + 1;
-    const date = eastern.getDate();
     const mmdd = `${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
 
     // US market holidays (fixed dates + observed rules)
@@ -109,11 +125,12 @@ export async function GET() {
 
     return NextResponse.json({
       market_status: marketStatus,
-      market_time: eastern.toLocaleTimeString("en-US", {
+      market_time: new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
         hour: "numeric",
         minute: "2-digit",
-        timeZone: "America/New_York",
-      }),
+        hour12: true,
+      }).format(now),
       top_flow: topFlow,
       sectors,
     });
