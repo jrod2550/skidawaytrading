@@ -1,0 +1,31 @@
+services:
+  # IBC Gateway — headless IBKR TWS
+  # See: https://github.com/gnzsnz/ib-gateway-docker
+  ib-gateway:
+    image: ghcr.io/gnzsnz/ib-gateway:stable
+    restart: unless-stopped
+    ports:
+      - "4001:4001"  # Live trading
+      - "4002:4002"  # Paper trading
+    environment:
+      TWS_USERID: ${IBKR_USERNAME}
+      TWS_PASSWORD: ${IBKR_PASSWORD}
+      TRADING_MODE: paper  # Change to 'live' for real trading
+      TWS_ACCEPT_INCOMING: "accept"
+    volumes:
+      - ib-gateway-data:/root/Jts
+
+  # Skidaway Trading Bot
+  bot:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - ib-gateway
+    env_file:
+      - ../.env
+    environment:
+      IBKR_HOST: ib-gateway
+      IBKR_PORT: 4002
+
+volumes:
+  ib-gateway-data:

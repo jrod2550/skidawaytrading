@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+web/node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+.env.production.local
+
+# Build
+web/.next/
+web/out/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+*.egg-info/
+*.egg
+.eggs/
+
+# Docker
+ib-gateway-data/
+
+# Claude
+.claude/

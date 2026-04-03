@@ -1,0 +1,236 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-teal: var(--teal);
+  --color-teal-foreground: var(--teal-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-sand: var(--sand);
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Skidaway Trading — Dark Mode First */
+:root {
+  --background: oklch(0.10 0.008 250);
+  --foreground: oklch(0.93 0.008 90);
+  --card: oklch(0.14 0.008 250);
+  --card-foreground: oklch(0.93 0.008 90);
+  --popover: oklch(0.14 0.008 250);
+  --popover-foreground: oklch(0.93 0.008 90);
+  --primary: oklch(0.72 0.15 175);
+  --primary-foreground: oklch(0.10 0.008 250);
+  --secondary: oklch(0.18 0.008 250);
+  --secondary-foreground: oklch(0.88 0.008 90);
+  --muted: oklch(0.18 0.008 250);
+  --muted-foreground: oklch(0.55 0.015 250);
+  --accent: oklch(0.18 0.012 250);
+  --accent-foreground: oklch(0.93 0.008 90);
+  --destructive: oklch(0.60 0.22 25);
+  --border: oklch(0.20 0.012 250);
+  --input: oklch(0.18 0.012 250);
+  --ring: oklch(0.72 0.15 175);
+
+  /* Skidaway custom colors */
+  --teal: oklch(0.72 0.15 175);
+  --teal-foreground: oklch(0.10 0.008 250);
+  --gold: oklch(0.78 0.14 85);
+  --gold-foreground: oklch(0.10 0.008 250);
+  --sand: oklch(0.62 0.04 80);
+  --profit: oklch(0.70 0.22 155);
+  --loss: oklch(0.62 0.22 25);
+
+  /* Charts — coastal palette */
+  --chart-1: oklch(0.72 0.15 175);
+  --chart-2: oklch(0.78 0.14 85);
+  --chart-3: oklch(0.60 0.12 200);
+  --chart-4: oklch(0.65 0.04 80);
+  --chart-5: oklch(0.50 0.12 175);
+
+  --radius: 0.5rem;
+
+  /* Sidebar */
+  --sidebar: oklch(0.08 0.010 250);
+  --sidebar-foreground: oklch(0.85 0.008 90);
+  --sidebar-primary: oklch(0.72 0.15 175);
+  --sidebar-primary-foreground: oklch(0.10 0.008 250);
+  --sidebar-accent: oklch(0.14 0.012 250);
+  --sidebar-accent-foreground: oklch(0.93 0.008 90);
+  --sidebar-border: oklch(0.18 0.012 250);
+  --sidebar-ring: oklch(0.72 0.15 175);
+}
+
+/* Noise texture overlay */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Glow effects */
+.glow-teal {
+  box-shadow: 0 0 20px oklch(0.72 0.15 175 / 0.15), 0 0 60px oklch(0.72 0.15 175 / 0.05);
+}
+
+.glow-gold {
+  box-shadow: 0 0 20px oklch(0.78 0.14 85 / 0.15), 0 0 60px oklch(0.78 0.14 85 / 0.05);
+}
+
+.glow-profit {
+  box-shadow: 0 0 15px oklch(0.70 0.22 155 / 0.2);
+}
+
+.glow-loss {
+  box-shadow: 0 0 15px oklch(0.62 0.22 25 / 0.2);
+}
+
+/* Animated gradient border */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.border-gradient {
+  position: relative;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.border-gradient::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(from var(--angle), oklch(0.72 0.15 175 / 0.3), oklch(0.78 0.14 85 / 0.1), oklch(0.72 0.15 175 / 0.3));
+  animation: rotate-gradient 8s linear infinite;
+}
+
+@keyframes rotate-gradient {
+  to { --angle: 360deg; }
+}
+
+/* Pulse animation for live indicators */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-live {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+/* Subtle scan line effect for terminal feel */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    oklch(0 0 0 / 0.03) 2px,
+    oklch(0 0 0 / 0.03) 4px
+  );
+}
+
+/* Number ticker animation */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count {
+  animation: count-up 0.4s ease-out;
+}
+
+/* Staggered fade in */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* Wave animation for background */
+@keyframes wave-drift {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25% { transform: translateX(-5px) translateY(3px); }
+  50% { transform: translateX(0) translateY(5px); }
+  75% { transform: translateX(5px) translateY(2px); }
+}
+
+.animate-wave {
+  animation: wave-drift 12s ease-in-out infinite;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
