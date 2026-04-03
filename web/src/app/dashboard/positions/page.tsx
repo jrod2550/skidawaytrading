@@ -79,7 +79,7 @@ export default function PositionsPage() {
       </div>
 
       {/* Portfolio Greeks Summary */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-muted-foreground">
@@ -133,6 +133,7 @@ export default function PositionsPage() {
               No open positions
             </p>
           ) : (
+            <div className="overflow-x-auto -mx-2">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -187,6 +188,7 @@ export default function PositionsPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

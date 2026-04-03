@@ -309,7 +309,7 @@ export default function DashboardOverview() {
       </div>
 
       {/* Metric strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
           { label: "Cash", value: fmtCurrency(snapshot?.cash_balance ?? null), mono: true },
           { label: "Positions", value: `${positions.length}`, mono: true },

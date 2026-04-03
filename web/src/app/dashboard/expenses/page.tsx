@@ -445,6 +445,7 @@ export default function ExpensesPage() {
               )}
             </div>
           ) : (
+            <div className="overflow-x-auto -mx-2">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -575,6 +576,7 @@ export default function ExpensesPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

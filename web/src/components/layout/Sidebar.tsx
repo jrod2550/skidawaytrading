@@ -25,9 +25,10 @@ const adminItems = [
 interface SidebarProps {
   profile: Profile | null;
   heartbeat: BotHeartbeat | null;
+  onNavigate?: () => void;
 }
 
-export default function Sidebar({ profile, heartbeat }: SidebarProps) {
+export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -99,6 +100,7 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150",
                 isActive

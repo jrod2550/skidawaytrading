@@ -58,7 +58,7 @@ export default function MembersPage() {
       </div>
 
       {/* Member Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         {members.map((m) => (
           <Card key={m.id}>
             <CardHeader className="pb-2">
@@ -140,6 +140,7 @@ export default function MembersPage() {
               No contributions recorded yet
             </p>
           ) : (
+            <div className="overflow-x-auto -mx-2">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -171,6 +172,7 @@ export default function MembersPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

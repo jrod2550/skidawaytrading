@@ -126,7 +126,7 @@ export default function ActivityPage() {
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card className="bg-card border-border">
           <CardContent className="p-3">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Events</p>

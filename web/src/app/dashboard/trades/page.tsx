@@ -68,6 +68,7 @@ export default function TradesPage() {
               No trades recorded yet
             </p>
           ) : (
+            <div className="overflow-x-auto -mx-2">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -113,6 +114,7 @@ export default function TradesPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
