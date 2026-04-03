@@ -205,8 +205,8 @@ Rules:
 - If data is sparse or market is closed, say so honestly — don't fabricate narrative
 - Cite "Unusual Whales flow data" or "congressional disclosure filings" when referencing sources`;
 
-    // Try latest Sonnet first, then older versions
-    const MODELS = [SONNET, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20240620"];
+    // Try models from best to most broadly available
+    const MODELS = [SONNET, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"];
     let claudeResp: Response | null = null;
     let usedModel = SONNET;
 
