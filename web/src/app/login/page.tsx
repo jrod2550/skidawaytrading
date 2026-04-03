@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -70,29 +71,14 @@ export default function LoginPage() {
         {/* Brand header */}
         <div className="mb-10 text-center animate-fade-up" style={{ animationDelay: "0ms" }}>
           {/* Logo mark */}
-          <div className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-2xl bg-[oklch(0.14_0.012_250)] border border-[oklch(0.24_0.015_250)] glow-teal">
-            <svg
-              viewBox="0 0 32 32"
-              className="w-8 h-8"
-              fill="none"
-            >
-              {/* Stylized bridge / wave mark */}
-              <path
-                d="M4 22 Q8 8 16 16 Q24 24 28 10"
-                stroke="oklch(0.72 0.15 175)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                fill="none"
-              />
-              <path
-                d="M4 26 Q8 18 16 22 Q24 26 28 18"
-                stroke="oklch(0.78 0.14 85)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                fill="none"
-                opacity="0.5"
-              />
-            </svg>
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-6 rounded-2xl glow-teal">
+            <Image
+              src="/logo.webp"
+              alt="Skidaway Trading"
+              width={80}
+              height={80}
+              className="rounded-2xl"
+            />
           </div>
 
           <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-foreground">

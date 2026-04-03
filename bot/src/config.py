@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     ibkr_port: int = 4002  # 4001=live, 4002=paper
     ibkr_client_id: int = 1
 
+    # Anthropic
+    anthropic_api_key: str = ""
+
     # Bot
     bot_mode: str = "manual_review"  # manual_review | semi_auto | full_auto
     poll_interval_seconds: int = 60

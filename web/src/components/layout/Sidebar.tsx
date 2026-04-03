@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +13,7 @@ const navItems = [
   { label: "Signals", href: "/dashboard/signals", icon: ZapIcon },
   { label: "Trades", href: "/dashboard/trades", icon: ArrowRightLeftIcon },
   { label: "Members", href: "/dashboard/members", icon: UsersIcon },
+  { label: "Expenses", href: "/dashboard/expenses", icon: ReceiptIcon },
 ];
 
 const adminItems = [
@@ -56,23 +58,13 @@ export default function Sidebar({ profile, heartbeat }: SidebarProps) {
       {/* Logo */}
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[oklch(0.14_0.012_250)] border border-[oklch(0.22_0.015_250)]">
-            <svg viewBox="0 0 32 32" className="w-4 h-4" fill="none">
-              <path
-                d="M4 22 Q8 8 16 16 Q24 24 28 10"
-                stroke="oklch(0.72 0.15 175)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M4 26 Q8 18 16 22 Q24 26 28 18"
-                stroke="oklch(0.78 0.14 85)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                opacity="0.4"
-              />
-            </svg>
-          </div>
+          <Image
+            src="/logo.webp"
+            alt="Skidaway Trading"
+            width={36}
+            height={36}
+            className="rounded-lg"
+          />
           <div>
             <p className="text-[13px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
               Skidaway
@@ -205,6 +197,16 @@ function UsersIcon({ className }: { className?: string }) {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function ReceiptIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+      <path d="M12 17.5v-11" />
     </svg>
   );
 }
