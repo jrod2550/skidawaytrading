@@ -36,16 +36,29 @@ class RiskManager:
         self._limits = DEFAULT_LIMITS.copy()
 
     async def load_limits(self) -> None:
-        """Load risk limits from bot_config table."""
+        """Load risk limits from bot_config table (set via Strategy page)."""
         db = get_supabase()
-        result = (
-            db.table("bot_config")
-            .select("value")
-            .eq("key", "risk_limits")
-            .execute()
-        )
+        result = db.table("bot_config").select("key, value").execute()
+
         if result.data:
-            self._limits.update(result.data[0]["value"])
+            config_map = {row["key"]: row["value"] for row in result.data}
+
+            # Map Strategy page keys to risk limits
+            if "max_position_pct" in config_map:
+                self._limits["max_position_pct"] = float(config_map["max_position_pct"])
+            if "max_portfolio_risk" in config_map:
+                self._limits["weekly_loss_pct"] = float(config_map["max_portfolio_risk"])
+            if "max_single_loss_pct" in config_map:
+                self._limits["position_stop_loss_pct"] = float(config_map["max_single_loss_pct"])
+            if "min_confidence" in config_map:
+                self._limits["min_confidence_score"] = float(config_map["min_confidence"])
+            if "max_daily_trades" in config_map:
+                self._limits["max_daily_trades"] = int(config_map["max_daily_trades"])
+            if "excluded_tickers" in config_map:
+                tickers = config_map["excluded_tickers"]
+                self._limits["excluded_tickers"] = set(tickers) if isinstance(tickers, list) else set()
+            if "risk_limits" in config_map:
+                self._limits.update(config_map["risk_limits"])
 
     async def check_trade(self, order: OptionOrder, confidence_score: float) -> RiskCheckResult:
         """Run all risk checks before placing a trade.
@@ -53,6 +66,14 @@ class RiskManager:
         Returns RiskCheckResult with allowed=True if all checks pass.
         """
         await self.load_limits()
+
+        # Check 0: Excluded tickers
+        excluded = self._limits.get("excluded_tickers", set())
+        if order.ticker.upper() in excluded:
+            return RiskCheckResult(
+                allowed=False,
+                reason=f"{order.ticker} is in the excluded tickers list",
+            )
 
         # Check 1: Minimum confidence score
         min_score = self._limits["min_confidence_score"]

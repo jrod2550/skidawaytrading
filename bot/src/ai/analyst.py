@@ -18,32 +18,53 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-HAIKU = "claude-3-haiku-20240307"
-# Use Haiku for deep analysis too until API key has Sonnet access
-# Upgrade to "claude-3-5-sonnet-latest" when available on your plan
-SONNET = "claude-3-haiku-20240307"
+HAIKU = "claude-haiku-4-5-20251001"
+SONNET = "claude-sonnet-4-6-20250514"
 
-SYSTEM_PROMPT = """You are a senior institutional options flow analyst at a quantitative hedge fund.
-You analyze raw market data — options flow, congressional trades, dark pool prints, and prediction
-markets — to identify high-conviction trading opportunities.
+SYSTEM_PROMPT = """You are a senior quantitative options flow analyst at Skidaway Trading, an institutional-style options fund.
 
-Your job is to determine:
-1. Is this INSTITUTIONAL positioning or retail noise?
-2. Is this a DIRECTIONAL bet or a HEDGE?
-3. What is the probable THESIS behind this activity?
-4. How CONFIDENT are you (0-100)?
-5. What specific OPTIONS TRADE would you recommend?
+ANALYTICAL FRAMEWORK:
+1. FLOW CLASSIFICATION — Distinguish institutional from retail. Key signals:
+   - Volume/OI ratio: V/OI > 3x = new positioning (not rolling). V/OI > 10x = extremely unusual.
+   - Sweep orders: Buyer lifting offers across exchanges = urgency = conviction.
+   - Block trades: Single large prints, often negotiated = institutional.
+   - Premium size: $100k+ on single-name = likely institutional. $500k+ = whale.
+   - Strike selection: Deep OTM = lottery/cheap hedge. ATM/slightly OTM = directional conviction.
+   - Expiry: < 7 DTE = gamma play/event trade. 30-90 DTE = thesis trade. > 90 DTE = LEAPS/accumulation.
 
-You think in terms of:
-- Smart money vs dumb money flow patterns
-- Unusual premium relative to open interest and volume
-- Sweep urgency (how aggressively the order was filled)
-- Congressional insider knowledge and committee relevance
-- Dark pool accumulation patterns
-- Cross-referencing multiple signals on the same ticker
+2. DIRECTIONAL vs HEDGE — Most large index put buying is portfolio insurance, NOT bearish conviction.
+   Hedges: puts on SPY/QQQ alongside long equity. Directional: single-name conviction bets.
 
-Be brutally honest about confidence. A 90+ score means you would bet your own money.
-Most signals should score 30-60 (noise). Only exceptional setups score 70+.
+3. DARK POOL SIGNALS — Large dark pool prints at or above ask = accumulation (bullish).
+   Prints below bid = distribution (bearish). Cross-reference with options flow direction.
+
+4. GREEK EXPOSURE (GEX) — Positive GEX = dealers hedged long gamma = market pinning.
+   Negative GEX = dealers short gamma = amplified moves. Key for timing entries.
+
+5. NOPE (Net Options Pricing Effect) — Delta-adjusted net flow. Extreme readings (> 2 or < -2)
+   often precede mean reversion. Use as a contrarian timing signal.
+
+6. CONGRESSIONAL TRADES — 30-45 day filing delay. Trades filed today happened weeks ago.
+   Committee relevance matters: a senator on Banking Committee buying bank stocks is different
+   from a random representative.
+
+7. INSIDER TRANSACTIONS — C-suite cluster buying is the strongest insider signal.
+   Single insider sells are noise (executives sell for tax/diversification).
+
+RISK MANAGEMENT PRINCIPLES:
+- Position sizing: Never recommend more than 5% of portfolio on a single trade
+- Preferred strategies: defined-risk (spreads, verticals) over naked options
+- Stop-loss: Always include a stop-loss recommendation (-30% default)
+- Take-profit: Scale out at milestones (50%, 100%)
+- IV consideration: Don't buy premium when IV rank > 80 (sell premium instead)
+- Earnings: Flag if trade crosses an earnings date
+
+CONFIDENCE CALIBRATION:
+- 90-100: Would bet your career. Multiple confirming signals, institutional flow + insider + dark pool alignment. Extremely rare.
+- 75-89: Strong conviction. Clear institutional flow with supporting data. Maybe 1-2 per week.
+- 65-74: Moderate conviction. Interesting setup but some ambiguity. Worth a small position.
+- 50-64: Marginal. Single data point, no confirmation. Screen pass but likely not tradeable.
+- Below 50: Noise. Retail flow, hedging, or insufficient data.
 
 Always respond in valid JSON format."""
 
@@ -55,38 +76,56 @@ Flow Data:
 JSON format (keep reasoning under 30 words):
 {{"pass_to_deep_analysis":true/false,"initial_score":0-100,"reasoning":"brief","is_institutional":true/false,"is_hedge":true/false,"ticker":"SYM","direction":"bullish"/"bearish"}}"""
 
-DEEP_ANALYSIS_PROMPT = """Perform deep institutional analysis on this trading signal.
+DEEP_ANALYSIS_PROMPT = """Perform deep institutional-grade analysis on this trading signal using ALL available data.
 
-Primary Signal:
+PRIMARY FLOW SIGNAL:
 {primary_data}
 
-Supporting Congressional Data (if any):
+SUPPORTING CONGRESSIONAL / INSIDER DATA:
 {congressional_data}
 
-Recent Flow on Same Ticker:
+RELATED OPTIONS FLOW ON SAME TICKER (recent):
 {related_flow}
 
-Current Market Context:
+DARK POOL ACTIVITY ON THIS TICKER:
+{dark_pool_data}
+
+GREEK EXPOSURE (GEX) & VOLATILITY:
+{greeks_vol_data}
+
+MARKET-WIDE CONTEXT (tide, top movers):
 {market_context}
+
+ANALYSIS REQUIREMENTS:
+1. Cross-reference flow direction with dark pool activity. Alignment = higher conviction.
+2. Check GEX positioning — is the market/stock in positive or negative gamma territory?
+3. Evaluate IV rank — is premium expensive or cheap? Should we buy or sell premium?
+4. Flag any upcoming earnings or macro events.
+5. Consider the current market tide — is this trade with or against the macro flow?
 
 Respond in JSON:
 {{
   "confidence_score": 0-100,
   "direction": "bullish" or "bearish",
-  "thesis": "2-3 sentence institutional thesis",
-  "is_institutional": true,
-  "institutional_type": "accumulation" | "conviction_bet" | "event_play" | "sector_rotation" | "unknown",
-  "risk_factors": ["list", "of", "risks"],
+  "thesis": "2-3 sentence institutional thesis with specific data points",
+  "is_institutional": true/false,
+  "institutional_type": "accumulation" | "conviction_bet" | "event_play" | "sector_rotation" | "hedge" | "unknown",
+  "flow_quality": "whale" | "institutional" | "mixed" | "retail",
+  "dark_pool_alignment": true/false/null,
+  "gex_context": "positive_gamma" | "negative_gamma" | "neutral" | "unknown",
+  "iv_assessment": "cheap" | "fair" | "expensive",
+  "risk_factors": ["specific", "data-backed", "risks"],
   "recommended_trade": {{
-    "action": "BUY CALL" or "BUY PUT" or "BULL SPREAD" or "BEAR SPREAD",
-    "strike_selection": "ATM" or "5% OTM" or "10% OTM" or specific number,
+    "action": "BUY CALL" | "BUY PUT" | "SELL PUT" | "BULL CALL SPREAD" | "BEAR PUT SPREAD" | "IRON CONDOR",
+    "strike_selection": "ATM" or "5% OTM" or specific number,
     "target_expiry_dte": 30,
     "position_size_pct": 2.0,
-    "entry_urgency": "immediate" or "wait_for_pullback" or "scale_in",
+    "entry_urgency": "immediate" | "wait_for_pullback" | "scale_in",
     "stop_loss_pct": -30,
-    "take_profit_pct": 100
+    "take_profit_targets": [50, 100],
+    "max_risk_dollars": null
   }},
-  "reasoning": "Detailed 3-5 sentence analysis of why this is or isn't a good trade"
+  "reasoning": "Detailed 4-6 sentence analysis referencing specific data: flow premium, V/OI, dark pool prints, GEX, IV rank. Explain WHY the data supports or contradicts the trade."
 }}"""
 
 CONGRESSIONAL_PROMPT = """Analyze this congressional trade disclosure for trading opportunities.
@@ -121,9 +160,9 @@ Respond in JSON:
 class ClaudeAnalyst:
     """AI analyst that processes market data through Claude."""
 
-    # Cost per token (as of 2025 pricing)
+    # Cost per token (Anthropic pricing)
     TOKEN_COSTS = {
-        HAIKU: {"input": 0.25 / 1_000_000, "output": 1.25 / 1_000_000},
+        HAIKU: {"input": 0.80 / 1_000_000, "output": 4.00 / 1_000_000},
         SONNET: {"input": 3.00 / 1_000_000, "output": 15.00 / 1_000_000},
     }
 
@@ -267,17 +306,21 @@ class ClaudeAnalyst:
         primary_data: dict,
         congressional_data: dict | None = None,
         related_flow: list[dict] | None = None,
+        dark_pool_data: list[dict] | None = None,
+        greeks_vol_data: dict | None = None,
         market_context: dict | None = None,
     ) -> dict:
-        """Deep institutional analysis with Sonnet.
+        """Deep institutional analysis with Sonnet using all available data.
 
         Returns full analysis with confidence score, thesis, and trade recommendation.
-        Cost: ~$0.02 per call.
+        Cost: ~$0.03 per call.
         """
         prompt = DEEP_ANALYSIS_PROMPT.format(
             primary_data=json.dumps(primary_data, indent=2),
             congressional_data=json.dumps(congressional_data or {}, indent=2),
             related_flow=json.dumps(related_flow or [], indent=2),
+            dark_pool_data=json.dumps(dark_pool_data or [], indent=2),
+            greeks_vol_data=json.dumps(greeks_vol_data or {}, indent=2),
             market_context=json.dumps(market_context or {}, indent=2),
         )
         result = await self._call(prompt, model=SONNET, max_tokens=2048)

@@ -132,15 +132,28 @@ class AIPipeline:
             )
             logger.info("ESCALATE %s — Haiku score %s, sending to Sonnet", ticker, initial_score)
 
-            # 3. Gather supporting data for deep analysis
-            congressional_data = await self._get_congressional_context(ticker)
-            related_flow = await self._get_related_flow(ticker)
+            # 3. Gather ALL supporting data for deep analysis
+            congressional_data, related_flow, dark_pool, greeks_vol, market_ctx = await self._gather_intel(ticker)
 
-            # 4. Sonnet deep analysis
+            self._log_activity(
+                "deep_analysis", ticker=ticker,
+                details={"stage": "started", "data_gathered": {
+                    "has_congressional": congressional_data is not None,
+                    "related_flow_count": len(related_flow),
+                    "has_dark_pool": len(dark_pool) > 0,
+                    "has_greeks": bool(greeks_vol),
+                }},
+                ai_reasoning=f"Gathering intel: {len(related_flow)} related flows, {'dark pool data' if dark_pool else 'no dark pool'}, {'GEX/IV data' if greeks_vol else 'no greeks'}",
+            )
+
+            # 4. Sonnet deep analysis with full data
             analysis = await self.analyst.deep_analysis(
                 primary_data=alert,
                 congressional_data=congressional_data,
                 related_flow=related_flow,
+                dark_pool_data=dark_pool,
+                greeks_vol_data=greeks_vol,
+                market_context=market_ctx,
             )
 
             if analysis.get("error"):
@@ -348,24 +361,73 @@ class AIPipeline:
         logger.info("Congressional scan complete: %d new signals", new_signals)
         return new_signals
 
-    async def _get_congressional_context(self, ticker: str) -> dict | None:
-        """Check if any congressional trades exist for this ticker recently."""
+    async def _gather_intel(self, ticker: str) -> tuple[dict | None, list[dict], list[dict], dict, dict]:
+        """Gather all available intelligence for a ticker.
+
+        Returns: (congressional_data, related_flow, dark_pool, greeks_vol, market_context)
+        """
+        congressional_data = None
+        related_flow: list[dict] = []
+        dark_pool: list[dict] = []
+        greeks_vol: dict = {}
+        market_context: dict = {}
+
+        # Gather everything in parallel where possible
         try:
             trades = await self.uw.get_congressional_trades()
             for t in trades:
                 if t.get("ticker", "").upper() == ticker.upper():
-                    return t
+                    congressional_data = t
+                    break
         except Exception:
             pass
-        return None
 
-    async def _get_related_flow(self, ticker: str) -> list[dict]:
-        """Get other recent flow alerts for the same ticker."""
         try:
             flow = await self.uw.get_flow_alerts(ticker)
-            return flow[:5]
+            related_flow = flow[:8]
         except Exception:
-            return []
+            pass
+
+        try:
+            dp = await self.uw.get_dark_pool_ticker(ticker)
+            dark_pool = dp[:5] if dp else []
+        except Exception:
+            pass
+
+        try:
+            gex = await self.uw.get_greek_exposure(ticker)
+            iv_rank = await self.uw.get_iv_rank(ticker)
+            vol_stats = await self.uw.get_volatility_stats(ticker)
+            greeks_vol = {
+                "gex": gex,
+                "iv_rank": iv_rank,
+                "vol_stats": vol_stats,
+            }
+        except Exception:
+            pass
+
+        try:
+            tide = await self.uw.get_market_tide()
+            top_impact = await self.uw.get_top_net_impact()
+            market_context = {
+                "market_tide": tide,
+                "top_net_impact": top_impact[:5] if isinstance(top_impact, list) else [],
+            }
+        except Exception:
+            pass
+
+        # Also check for insider activity
+        try:
+            insiders = await self.uw.get_insider_ticker(ticker)
+            if insiders:
+                if congressional_data is None:
+                    congressional_data = {"insider_transactions": insiders[:3]}
+                else:
+                    congressional_data["insider_transactions"] = insiders[:3]
+        except Exception:
+            pass
+
+        return congressional_data, related_flow, dark_pool, greeks_vol, market_context
 
     def _parse_strike(self, strike_selection: str | None, alert: dict) -> float | None:
         """Parse strike from AI recommendation."""
