@@ -362,44 +362,209 @@ export default function StrategyPage() {
         </CardContent>
       </Card>
 
-      {/* How It Works */}
+      {/* AI Brain Flow Diagram */}
       <Card className="bg-card border-border">
         <CardContent className="p-6">
-          <h3 className="text-sm font-semibold mb-4">How the AI Trades</h3>
-          <div className="space-y-4 text-sm text-foreground/80 leading-relaxed">
+          <h3 className="text-sm font-semibold mb-6">AI Brain — How Data Flows to Trades</h3>
+
+          {/* Visual flow */}
+          <div className="space-y-3">
+            {/* Data Sources Row */}
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Data Sources</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {["Options Flow", "Dark Pool", "GEX/Gamma", "IV Rank", "Congress", "Insiders", "Econ Calendar", "Earnings", "Market Tide"].map((s) => (
+                  <span key={s} className="text-[10px] font-mono px-2 py-1 rounded-md bg-[oklch(0.55_0.18_175_/_0.06)] border border-[oklch(0.55_0.18_175_/_0.15)] text-teal">{s}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+
+            {/* Unusual Whales */}
+            <div className="mx-auto max-w-md rounded-xl border-2 border-teal/20 bg-[oklch(0.55_0.18_175_/_0.03)] p-4 text-center">
+              <p className="text-xs font-semibold text-teal">UNUSUAL WHALES API</p>
+              <p className="text-[10px] text-muted-foreground mt-1">25+ endpoints, $300/yr subscription</p>
+              <p className="text-[10px] text-muted-foreground">9 data streams per signal analysis</p>
+            </div>
+
+            <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+
+            {/* AI Brain */}
+            <div className="mx-auto max-w-lg rounded-xl border-2 border-gold/30 bg-[oklch(0.65_0.16_85_/_0.04)] p-5 text-center">
+              <p className="text-sm font-bold text-gold mb-2">CLAUDE AI BRAIN</p>
+              <div className="grid grid-cols-2 gap-3 text-left">
+                <div className="rounded-lg bg-card border border-border p-3">
+                  <p className="text-[10px] font-semibold text-teal">TIER 1: HAIKU</p>
+                  <p className="text-[10px] text-muted-foreground">Fast screen every flow alert</p>
+                  <p className="text-[10px] text-muted-foreground">~$0.001/call, ~390/day</p>
+                  <p className="text-[10px] text-muted-foreground">Institutional or retail? Hedge or directional?</p>
+                </div>
+                <div className="rounded-lg bg-card border border-border p-3">
+                  <p className="text-[10px] font-semibold text-gold">TIER 2: SONNET</p>
+                  <p className="text-[10px] text-muted-foreground">Deep analysis with all 9 data streams</p>
+                  <p className="text-[10px] text-muted-foreground">~$0.03/call, ~5-15/day</p>
+                  <p className="text-[10px] text-muted-foreground">Thesis, risk factors, trade recommendation</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-3">Considers: V/OI ratios, sweep urgency, dark pool alignment, GEX positioning, IV rank, earnings dates, FOMC/CPI events, congressional filing delays</p>
+            </div>
+
+            <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+
+            {/* Risk Manager */}
+            <div className="mx-auto max-w-md rounded-xl border-2 border-loss/20 bg-[oklch(0.52_0.22_25_/_0.03)] p-4 text-center">
+              <p className="text-xs font-semibold text-loss">RISK MANAGER</p>
+              <p className="text-[10px] text-muted-foreground mt-1">7 checks: confidence, position size, portfolio risk, daily loss, delta, excluded tickers, bot paused</p>
+              <p className="text-[10px] text-muted-foreground">Controlled by YOUR settings on this page</p>
+            </div>
+
+            <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+
+            {/* Two execution paths */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-xl border-2 border-profit/20 bg-[oklch(0.50_0.20_155_/_0.03)] p-4">
+                <p className="text-xs font-semibold text-profit mb-2">IBKR OPTIONS</p>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <p>Account: DU8395165 (paper)</p>
+                  <p>Port: 4002 (paper) / 4001 (live)</p>
+                  <p>Pool: $10,000 paper</p>
+                  <p>Jarrett: $5k / Jack: $5k / Craig: $0</p>
+                  <p>Max position: {maxPositionPct}% of portfolio</p>
+                  <p>Trades: Options (calls, puts)</p>
+                  <p>Mode: {botMode === "full_auto" ? "Full Auto" : botMode === "semi_auto" ? "Semi-Auto (85+ auto)" : "Manual Review"}</p>
+                </div>
+              </div>
+              <div className="rounded-xl border-2 border-gold/20 bg-[oklch(0.65_0.16_85_/_0.03)] p-4">
+                <p className="text-xs font-semibold text-gold mb-2">KALSHI PREDICTIONS</p>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <p>Account: Production (real money)</p>
+                  <p>Markets: Crypto, Climate, Economics</p>
+                  <p>Max per trade: $50</p>
+                  <p>Max contracts: 10 per market</p>
+                  <p>Auto-executes: edge 10%+ &amp; confidence 60+</p>
+                  <p>Scan frequency: Every 5 minutes</p>
+                  <p>Uses UW flow data for edge detection</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* What Each Agent Does */}
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <h3 className="text-sm font-semibold mb-4">What Each Agent Does &amp; Doesn't Do</h3>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-teal/20 p-4">
+              <p className="text-sm font-semibold text-teal mb-2">Haiku Screener</p>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="font-medium text-profit mb-1">DOES:</p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    <li>- Screen every flow alert in seconds</li>
+                    <li>- Classify institutional vs retail</li>
+                    <li>- Identify hedges vs directional bets</li>
+                    <li>- Score 0-100 for quick filtering</li>
+                    <li>- Filter ~95% of noise before Sonnet</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium text-loss mb-1">DOESN'T:</p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    <li>- See dark pool, GEX, or earnings data</li>
+                    <li>- Generate trade recommendations</li>
+                    <li>- Execute any trades</li>
+                    <li>- Consider portfolio context</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gold/20 p-4">
+              <p className="text-sm font-semibold text-gold mb-2">Sonnet Analyst</p>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="font-medium text-profit mb-1">DOES:</p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    <li>- Analyze all 9 data streams simultaneously</li>
+                    <li>- Cross-reference dark pool with options flow</li>
+                    <li>- Check GEX for dealer positioning</li>
+                    <li>- Evaluate IV rank (buy vs sell premium)</li>
+                    <li>- Flag earnings and macro events</li>
+                    <li>- Generate thesis + trade recommendation</li>
+                    <li>- Identify risk factors</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium text-loss mb-1">DOESN'T:</p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    <li>- Execute trades directly</li>
+                    <li>- Override risk manager limits</li>
+                    <li>- Monitor open positions</li>
+                    <li>- Enforce stop-losses (not yet)</li>
+                    <li>- Place multi-leg spread orders (not yet)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-loss/20 p-4">
+              <p className="text-sm font-semibold text-loss mb-2">Risk Manager</p>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="font-medium text-profit mb-1">DOES:</p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    <li>- Block trades below confidence threshold</li>
+                    <li>- Enforce position size limits</li>
+                    <li>- Check daily loss circuit breaker</li>
+                    <li>- Monitor portfolio delta exposure</li>
+                    <li>- Respect excluded tickers list</li>
+                    <li>- Honor bot paused flag</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium text-loss mb-1">DOESN'T:</p>
+                  <ul className="space-y-0.5 text-muted-foreground">
+                    <li>- Auto-close losing positions (not yet)</li>
+                    <li>- Enforce take-profit exits (not yet)</li>
+                    <li>- Monitor weekly loss limits (not yet)</li>
+                    <li>- Check theta decay exposure</li>
+                    <li>- Manage Kalshi position limits</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Fund Control */}
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <h3 className="text-sm font-semibold mb-4">How You Control the Money</h3>
+          <div className="space-y-3 text-sm text-foreground/80 leading-relaxed">
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.55_0.18_175_/_0.08)] border border-[oklch(0.55_0.18_175_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-teal">1</div>
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.55_0.18_175_/_0.08)] border border-[oklch(0.55_0.18_175_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-teal">$</div>
               <div>
-                <p className="font-semibold text-foreground">Scan — Every 60 seconds during market hours</p>
-                <p className="text-muted-foreground">The bot pulls options flow alerts from Unusual Whales. Filters out noise (sub-$10k premium, index ETF hedging).</p>
+                <p className="font-semibold text-foreground">IBKR Pool: You control deposits/withdrawals</p>
+                <p className="text-muted-foreground">Real money only enters when YOU fund the IBKR account. The bot can only trade what's in the account. Switch from paper (4002) to live (4001) when ready.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.55_0.18_175_/_0.08)] border border-[oklch(0.55_0.18_175_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-teal">2</div>
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.65_0.16_85_/_0.08)] border border-[oklch(0.65_0.16_85_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-gold">K</div>
               <div>
-                <p className="font-semibold text-foreground">Screen — Claude Haiku fast-screens each alert</p>
-                <p className="text-muted-foreground">Cost: ~$0.001/call. Haiku decides in seconds: institutional or retail? Directional or hedge? Score 0-100. Alerts scoring 50+ escalate.</p>
+                <p className="font-semibold text-foreground">Kalshi: Separate balance, auto-trades production</p>
+                <p className="text-muted-foreground">Kalshi has its own balance. Deposit via kalshi.com. Bot is capped at $50 per market. You can adjust this or pause via the Strategy page.</p>
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.65_0.16_85_/_0.08)] border border-[oklch(0.65_0.16_85_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-gold">3</div>
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.52_0.22_25_/_0.08)] border border-[oklch(0.52_0.22_25_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-loss">!</div>
               <div>
-                <p className="font-semibold text-foreground">Analyze — Claude Sonnet performs deep analysis</p>
-                <p className="text-muted-foreground">Cost: ~$0.02/call. Cross-references congressional trades, related flow, market context. Generates a thesis, risk factors, and specific trade recommendation.</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.50_0.20_155_/_0.08)] border border-[oklch(0.50_0.20_155_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-profit">4</div>
-              <div>
-                <p className="font-semibold text-foreground">Signal — Creates a trade signal if confidence exceeds threshold</p>
-                <p className="text-muted-foreground">Signal includes: ticker, direction, strike, expiry, position size. In manual mode, it waits for your approval. In semi-auto, 85+ confidence auto-executes.</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[oklch(0.50_0.20_155_/_0.08)] border border-[oklch(0.50_0.20_155_/_0.2)] flex items-center justify-center text-xs font-mono font-bold text-profit">5</div>
-              <div>
-                <p className="font-semibold text-foreground">Execute — Places order on IBKR via paper account</p>
-                <p className="text-muted-foreground">Risk manager validates position size, portfolio exposure, and daily trade limits before sending order. Currently on paper account DU8395165.</p>
+                <p className="font-semibold text-foreground">Emergency Stop: 4 ways to halt trading instantly</p>
+                <p className="text-muted-foreground">1) Dashboard: toggle Bot Paused in Settings. 2) SSH: sudo systemctl stop skidaway-bot. 3) IBKR: cancel all orders in the app. 4) Kalshi: cancel orders at kalshi.com.</p>
               </div>
             </div>
           </div>
