@@ -143,11 +143,14 @@ class KalshiPipeline:
             return 0
 
         # Filter for interesting markets
+        # In demo mode, take all markets since demo only has test markets
         interesting = []
         for m in markets:
             title = (m.get("title", "") + " " + m.get("subtitle", "")).lower()
             ticker = m.get("ticker", "").lower()
-            if any(kw in title or kw in ticker for kw in SCAN_KEYWORDS):
+            is_interesting = any(kw in title or kw in ticker for kw in SCAN_KEYWORDS)
+            # In demo, accept all markets so we can test the pipeline
+            if is_interesting or self.kalshi.demo:
                 interesting.append({
                     "ticker": m.get("ticker"),
                     "title": m.get("title"),
