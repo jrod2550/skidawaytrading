@@ -18,6 +18,7 @@ class OptionOrder:
     quantity: int
     order_type: str = "limit"  # 'market' or 'limit'
     limit_price: float | None = None
+    instrument_type: str = "option"  # 'option' or 'equity'
 
 
 @dataclass

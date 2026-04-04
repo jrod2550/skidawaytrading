@@ -7,7 +7,7 @@ Uses nest_asyncio to allow ib_insync's event loop inside asyncio.
 import logging
 
 import nest_asyncio
-from ib_insync import IB, Option, Order, Trade
+from ib_insync import IB, Option, Order, Stock, Trade
 
 from src.broker.base import (
     AccountBalance,
@@ -55,6 +55,9 @@ class IBKRBroker(BrokerAdapter):
         )
 
     async def place_option_order(self, order: OptionOrder) -> OrderResult:
+        # Route to equity or option based on instrument_type
+        if order.instrument_type == "equity":
+            return await self._place_equity_order(order)
         contract = self._make_option_contract(order)
 
         qualified = self._ib.qualifyContracts(contract)
@@ -89,6 +92,59 @@ class IBKRBroker(BrokerAdapter):
         )
 
         # Wait for fill
+        self._ib.sleep(3)
+
+        fill_price = None
+        commission = None
+        if trade.fills:
+            fill_price = trade.fills[0].execution.price
+            commission = sum(
+                f.commissionReport.commission
+                for f in trade.fills
+                if f.commissionReport
+            )
+
+        return OrderResult(
+            order_id=str(trade.order.orderId),
+            status=trade.orderStatus.status.lower(),
+            fill_price=fill_price,
+            filled_quantity=int(trade.orderStatus.filled),
+            commission=commission,
+            raw_response={"status": trade.orderStatus.status},
+        )
+
+    async def _place_equity_order(self, order: OptionOrder) -> OrderResult:
+        """Place a stock/equity order on IBKR."""
+        contract = Stock(order.ticker, "SMART", "USD")
+        qualified = self._ib.qualifyContracts(contract)
+        if not qualified:
+            return OrderResult(
+                order_id="", status="error",
+                message=f"Could not qualify stock: {order.ticker}",
+            )
+
+        action = "BUY" if "buy" in order.action else "SELL"
+        if order.order_type == "limit" and order.limit_price:
+            ib_order = Order(
+                action=action,
+                totalQuantity=order.quantity,
+                orderType="LMT",
+                lmtPrice=order.limit_price,
+            )
+        else:
+            ib_order = Order(
+                action=action,
+                totalQuantity=order.quantity,
+                orderType="MKT",
+            )
+
+        trade: Trade = self._ib.placeOrder(contract, ib_order)
+        logger.info(
+            "Placed IBKR equity order: %s %dx %s @ %s",
+            action, order.quantity, order.ticker,
+            order.limit_price or "MKT",
+        )
+
         self._ib.sleep(3)
 
         fill_price = None

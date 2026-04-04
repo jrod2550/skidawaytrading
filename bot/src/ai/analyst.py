@@ -51,12 +51,19 @@ ANALYTICAL FRAMEWORK:
 7. INSIDER TRANSACTIONS — C-suite cluster buying is the strongest insider signal.
    Single insider sells are noise (executives sell for tax/diversification).
 
+INSTRUMENT SELECTION — OPTIONS vs EQUITIES:
+- Use OPTIONS when: leveraged directional bet, defined risk needed, earnings event play, short-duration thesis (< 90 days), IV is cheap
+- Use EQUITIES when: long-term conviction, high IV makes options expensive (IV rank > 70), want to avoid theta decay, accumulation play, dark pool signals institutional stock buying
+- BUY STOCK when bullish and options are expensive or thesis is long-duration
+- SELL SHORT when bearish and put premiums are too high
+- Always specify "instrument": "option" or "equity" in your recommendation
+
 RISK MANAGEMENT PRINCIPLES:
 - Position sizing: Never recommend more than 5% of portfolio on a single trade
 - Preferred strategies: defined-risk (spreads, verticals) over naked options
 - Stop-loss: Always include a stop-loss recommendation (-30% default)
 - Take-profit: Scale out at milestones (50%, 100%)
-- IV consideration: Don't buy premium when IV rank > 80 (sell premium instead)
+- IV consideration: Don't buy premium when IV rank > 80 (sell premium or use equities instead)
 - Earnings: Flag if trade crosses an earnings date
 
 CONFIDENCE CALIBRATION:
@@ -120,9 +127,10 @@ Respond in JSON:
   "iv_assessment": "cheap" | "fair" | "expensive",
   "risk_factors": ["specific", "data-backed", "risks"],
   "recommended_trade": {{
-    "action": "BUY CALL" | "BUY PUT" | "SELL PUT" | "BULL CALL SPREAD" | "BEAR PUT SPREAD" | "IRON CONDOR",
-    "strike_selection": "ATM" or "5% OTM" or specific number,
-    "target_expiry_dte": 30,
+    "instrument": "option" or "equity",
+    "action": "BUY CALL" | "BUY PUT" | "SELL PUT" | "BULL CALL SPREAD" | "BEAR PUT SPREAD" | "BUY STOCK" | "SELL SHORT",
+    "strike_selection": "ATM" or "5% OTM" or specific number (options only),
+    "target_expiry_dte": 30 (options only, null for equity),
     "position_size_pct": 2.0,
     "entry_urgency": "immediate" | "wait_for_pullback" | "scale_in",
     "stop_loss_pct": -30,

@@ -429,7 +429,7 @@ export default function StrategyPage() {
                   <p>Account: DU8395165 (paper)</p>
                   <p>Pool: $10k — Jarrett $5k / Jack $5k</p>
                   <p>Max position: {maxPositionPct}% · Mode: {botMode === "full_auto" ? "Full Auto" : botMode === "semi_auto" ? "Semi-Auto" : "Manual"}</p>
-                  <p>Trades: Options (calls, puts, spreads)</p>
+                  <p>Trades: Options + Equities (AI picks best instrument)</p>
                 </div>
                 <div className="rounded-lg bg-[oklch(0.55_0.18_175_/_0.04)] border border-teal/20 p-2">
                   <p className="text-[9px] font-semibold text-teal">READS FROM KALSHI:</p>
@@ -561,6 +561,69 @@ export default function StrategyPage() {
                     <li>- Check theta decay exposure</li>
                     <li>- Manage Kalshi position limits</li>
                   </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Technical Execution Detail */}
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <h3 className="text-sm font-semibold mb-4">Technical Execution — How Trades Actually Happen</h3>
+          <div className="space-y-4">
+            {/* IBKR Execution */}
+            <div className="rounded-lg border border-profit/20 p-4">
+              <p className="text-sm font-semibold text-profit mb-3">IBKR Execution Pipeline</p>
+              <div className="space-y-2 text-[10px] font-mono text-muted-foreground">
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">1. AI Recommends (Sonnet 4.6)</p>
+                  <p>{`{ instrument: "option"|"equity", action: "BUY CALL"|"BUY STOCK"|..., strike: 130, expiry_dte: 45, size: 2% }`}</p>
+                </div>
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">2. Order Builder Translates</p>
+                  <p>Options: ticker + strike + expiry + call/put → IBKR Option contract</p>
+                  <p>Equities: ticker + shares → IBKR Stock contract (when IV is high or long-term thesis)</p>
+                </div>
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">3. Risk Manager Gates (7 checks)</p>
+                  <p>Excluded ticker? → Confidence min? → Max positions? → Position size %? → Daily loss? → Delta limit? → Paused?</p>
+                </div>
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">4. IBKR Broker Adapter Executes</p>
+                  <p>qualifyContracts(contract) → placeOrder(contract, order) → sleep(3s) → check fills</p>
+                  <p>Connection: Python ↔ IB Gateway (:4002 paper / :4001 live) ↔ IBKR servers</p>
+                </div>
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">5. Record to Supabase</p>
+                  <p>trades table: ticker, action, quantity, fill_price, commission, status</p>
+                  <p>Signal marked &quot;executed&quot; → visible on Trades page</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Kalshi Execution */}
+            <div className="rounded-lg border border-gold/20 p-4">
+              <p className="text-sm font-semibold text-gold mb-3">Kalshi Execution Pipeline</p>
+              <div className="space-y-2 text-[10px] font-mono text-muted-foreground">
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">1. Scan 1000+ Markets (every 5 min)</p>
+                  <p>GET /markets?status=open → sort by volume → top 30 analyzed</p>
+                </div>
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">2. AI Estimates True Probability (Sonnet 4.6)</p>
+                  <p>Market price: 65¢ (65% implied) | AI estimate: 80% | Edge: 15% → TRADE</p>
+                  <p>Reads: UW flow data + IBKR signals + economic calendar</p>
+                </div>
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">3. Execute via Kalshi API</p>
+                  <p>POST /portfolio/orders → RSA-PSS signed → side: yes/no, count: 1-10, price: 1-99¢</p>
+                  <p>Auth: RSA private key signing every request (timestamp + method + path)</p>
+                </div>
+                <div className="rounded bg-muted px-3 py-2">
+                  <p className="text-foreground font-semibold mb-1">4. Record to ai_activity</p>
+                  <p>ticker: KALSHI:MARKET-TICKER, edge, probability, reasoning → visible on Kalshi page</p>
                 </div>
               </div>
             </div>
