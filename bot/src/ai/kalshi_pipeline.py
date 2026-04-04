@@ -305,8 +305,9 @@ class KalshiPipeline:
                 raise ValueError("No Claude model available")
 
             text = data["content"][0]["text"]
+            logger.debug("Kalshi raw response length: %d chars", len(text))
 
-            # Extract JSON
+            # Extract JSON — multiple strategies
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0]
             elif "```" in text:
@@ -316,7 +317,21 @@ class KalshiPipeline:
             if start != -1 and end != -1:
                 text = text[start:end + 1]
 
-            analysis = json.loads(text.strip())
+            # Try parsing, with repair for common issues
+            try:
+                analysis = json.loads(text.strip())
+            except json.JSONDecodeError:
+                # Try fixing trailing commas and other common issues
+                import re
+                fixed = re.sub(r',\s*}', '}', text)
+                fixed = re.sub(r',\s*]', ']', fixed)
+                try:
+                    analysis = json.loads(fixed.strip())
+                    logger.info("Kalshi JSON repaired successfully")
+                except json.JSONDecodeError:
+                    # Last resort: extract just the analysis array
+                    logger.warning("Kalshi JSON still invalid, attempting partial parse")
+                    analysis = {"analysis": [], "market_summary": "JSON parse failed — no trades this cycle"}
         except Exception as e:
             import traceback
             err_detail = traceback.format_exc()
