@@ -176,6 +176,13 @@ class UnusualWhalesClient:
         data = await self._get("/api/screener/contract-screener")
         return data.get("data", [])
 
+    # ── Earnings ───────────────────────────────────────────────
+
+    async def get_earnings(self, ticker: str) -> list[dict]:
+        """Get earnings dates and history for a ticker."""
+        data = await self._get(f"/api/earnings/{ticker}")
+        return data.get("data", [])
+
     # ── Short Interest ────────────────────────────────────────
 
     async def get_short_interest(self, ticker: str) -> dict:

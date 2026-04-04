@@ -431,6 +431,12 @@ class AIPipeline:
             except Exception:
                 return []
 
+        async def fetch_earnings():
+            try:
+                return await self.uw.get_earnings(ticker)
+            except Exception:
+                return []
+
         # Run ALL fetches in parallel
         results = await asyncio.gather(
             fetch_congressional(),
@@ -440,6 +446,7 @@ class AIPipeline:
             fetch_market(),
             fetch_insiders(),
             fetch_econ_calendar(),
+            fetch_earnings(),
         )
 
         congressional_data = results[0]
@@ -449,6 +456,7 @@ class AIPipeline:
         market_context = results[4]
         insiders = results[5]
         econ_calendar = results[6]
+        earnings = results[7]
 
         # Attach insider data
         if insiders:
@@ -460,6 +468,10 @@ class AIPipeline:
         # Attach economic calendar to market context
         if econ_calendar:
             market_context["economic_calendar"] = econ_calendar[:5] if isinstance(econ_calendar, list) else []
+
+        # Attach ticker-specific earnings dates to greeks/vol data
+        if earnings:
+            greeks_vol["upcoming_earnings"] = earnings[:3] if isinstance(earnings, list) else []
 
         return congressional_data, related_flow, dark_pool, greeks_vol, market_context
 

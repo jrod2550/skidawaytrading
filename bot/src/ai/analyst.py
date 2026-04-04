@@ -90,11 +90,13 @@ RELATED OPTIONS FLOW ON SAME TICKER (recent):
 DARK POOL ACTIVITY ON THIS TICKER:
 {dark_pool_data}
 
-GREEK EXPOSURE (GEX) & VOLATILITY:
+GREEK EXPOSURE (GEX), VOLATILITY & EARNINGS:
 {greeks_vol_data}
+(Note: If "upcoming_earnings" is present above, it contains this ticker's next earnings dates. Factor this into your analysis — IV typically expands 5-10 days before earnings and crushes immediately after.)
 
 MARKET-WIDE CONTEXT (tide, top movers, economic calendar):
 {market_context}
+(Note: If "economic_calendar" is present above, these are upcoming macro events. FOMC, CPI, NFP, and GDP are HIGH IMPACT — they can move the entire market and spike/crush IV across all tickers.)
 
 ANALYSIS REQUIREMENTS:
 1. Cross-reference flow direction with dark pool activity. Alignment = higher conviction.
