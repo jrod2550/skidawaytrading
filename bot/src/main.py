@@ -12,7 +12,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.ai.analyst import ClaudeAnalyst
 from src.ai.pipeline import AIPipeline
-from src.broker.paper import PaperBroker
 from src.config import settings
 from src.db.supabase_client import get_supabase
 from src.execution.executor import TradeExecutor
@@ -59,6 +58,17 @@ async def main() -> None:
         },
     }).execute()
 
+    # Initialize Kalshi if configured
+    kalshi_pipeline = None
+    if settings.kalshi_api_key:
+        from src.broker.kalshi import KalshiClient
+        from src.ai.kalshi_pipeline import KalshiPipeline
+        kalshi = KalshiClient(demo=settings.kalshi_demo)
+        kalshi_pipeline = KalshiPipeline(kalshi, analyst)
+        logger.info("Kalshi integration enabled (%s mode)", "DEMO" if settings.kalshi_demo else "PRODUCTION")
+    else:
+        logger.info("Kalshi integration disabled (no API key configured)")
+
     # Set up scheduler
     scheduler = AsyncIOScheduler()
 
@@ -87,6 +97,17 @@ async def main() -> None:
         max_instances=1,
         misfire_grace_time=60,
     )
+
+    # ── Kalshi Prediction Market Scan — every 5 minutes ──
+    if kalshi_pipeline:
+        scheduler.add_job(
+            kalshi_pipeline.scan_markets,
+            "interval",
+            minutes=5,
+            id="kalshi_scan",
+            max_instances=1,
+            misfire_grace_time=60,
+        )
 
     # ── Expire old signals — every 15 minutes ──
     scheduler.add_job(

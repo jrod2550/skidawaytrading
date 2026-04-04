@@ -15,6 +15,7 @@ const navItems = [
   { label: "Signals", href: "/dashboard/signals", icon: ZapIcon },
   { label: "AI Briefing", href: "/dashboard/briefing", icon: BriefingIcon },
   { label: "Whale Alerts", href: "/dashboard/whales", icon: WhaleIcon },
+  { label: "Kalshi", href: "/dashboard/kalshi", icon: KalshiIcon },
   { label: "AI Activity", href: "/dashboard/activity", icon: ActivityIcon },
   { label: "Congress", href: "/dashboard/congress", icon: CongressIcon },
   { label: "Members", href: "/dashboard/members", icon: UsersIcon },
@@ -234,6 +235,15 @@ function ReceiptIcon({ className }: { className?: string }) {
       <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
       <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
       <path d="M12 17.5v-11" />
+    </svg>
+  );
+}
+
+function KalshiIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
     </svg>
   );
 }

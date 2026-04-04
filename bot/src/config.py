@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     ibkr_username: str = ""
     ibkr_password: str = ""
 
+    # Kalshi
+    kalshi_api_key: str = ""
+    kalshi_private_key: str = ""  # PEM key content or path to .key file
+    kalshi_demo: bool = True  # True = demo, False = production
+
     # Anthropic
     anthropic_api_key: str = ""
 
