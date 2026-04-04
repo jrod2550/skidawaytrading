@@ -382,71 +382,98 @@ export default function StrategyPage() {
             {/* Arrow */}
             <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
 
-            {/* Unusual Whales */}
-            <div className="mx-auto max-w-md rounded-xl border-2 border-teal/20 bg-[oklch(0.55_0.18_175_/_0.03)] p-4 text-center">
-              <p className="text-xs font-semibold text-teal">UNUSUAL WHALES API</p>
-              <p className="text-[10px] text-muted-foreground mt-1">25+ endpoints, $300/yr subscription</p>
-              <p className="text-[10px] text-muted-foreground">9 data streams per signal analysis</p>
-            </div>
-
-            <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
-
-            {/* AI Brain */}
-            <div className="mx-auto max-w-lg rounded-xl border-2 border-gold/30 bg-[oklch(0.65_0.16_85_/_0.04)] p-5 text-center">
-              <p className="text-sm font-bold text-gold mb-2">CLAUDE AI BRAIN</p>
-              <div className="grid grid-cols-2 gap-3 text-left">
-                <div className="rounded-lg bg-card border border-border p-3">
-                  <p className="text-[10px] font-semibold text-teal">TIER 1: HAIKU</p>
-                  <p className="text-[10px] text-muted-foreground">Fast screen every flow alert</p>
-                  <p className="text-[10px] text-muted-foreground">~$0.001/call, ~390/day</p>
-                  <p className="text-[10px] text-muted-foreground">Institutional or retail? Hedge or directional?</p>
-                </div>
-                <div className="rounded-lg bg-card border border-border p-3">
-                  <p className="text-[10px] font-semibold text-gold">TIER 2: SONNET</p>
-                  <p className="text-[10px] text-muted-foreground">Deep analysis with all 9 data streams</p>
-                  <p className="text-[10px] text-muted-foreground">~$0.03/call, ~5-15/day</p>
-                  <p className="text-[10px] text-muted-foreground">Thesis, risk factors, trade recommendation</p>
-                </div>
+            {/* Shared Intelligence Layer */}
+            <div className="mx-auto max-w-lg rounded-xl border-2 border-teal/20 bg-[oklch(0.55_0.18_175_/_0.03)] p-4 text-center">
+              <p className="text-xs font-semibold text-teal">SHARED INTELLIGENCE LAYER</p>
+              <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                {["UW Options Flow", "Dark Pool", "GEX", "IV Rank", "Congress", "Insiders", "Earnings", "Econ Calendar", "Market Tide"].map((s) => (
+                  <span key={s} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-card border border-border">{s}</span>
+                ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-3">Considers: V/OI ratios, sweep urgency, dark pool alignment, GEX positioning, IV rank, earnings dates, FOMC/CPI events, congressional filing delays</p>
+              <p className="text-[10px] text-muted-foreground mt-2">Both streams share the same 9 data sources — Unusual Whales $300/yr subscription</p>
             </div>
 
             <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
 
-            {/* Risk Manager */}
-            <div className="mx-auto max-w-md rounded-xl border-2 border-loss/20 bg-[oklch(0.52_0.22_25_/_0.03)] p-4 text-center">
-              <p className="text-xs font-semibold text-loss">RISK MANAGER</p>
-              <p className="text-[10px] text-muted-foreground mt-1">7 checks: confidence, position size, portfolio risk, daily loss, delta, excluded tickers, bot paused</p>
-              <p className="text-[10px] text-muted-foreground">Controlled by YOUR settings on this page</p>
+            {/* AI Brain — Sonnet 4.6 */}
+            <div className="mx-auto max-w-lg rounded-xl border-2 border-gold/30 bg-[oklch(0.65_0.16_85_/_0.04)] p-5 text-center">
+              <p className="text-sm font-bold text-gold mb-1">CLAUDE SONNET 4.6</p>
+              <p className="text-[10px] text-muted-foreground mb-3">One brain, two specialized modes — each informs the other</p>
             </div>
 
             <div className="flex justify-center"><svg className="w-4 h-6 text-muted-foreground" viewBox="0 0 16 24"><path d="M8 0v20M3 15l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
 
-            {/* Two execution paths */}
+            {/* Two parallel streams */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-xl border-2 border-profit/20 bg-[oklch(0.50_0.20_155_/_0.03)] p-4">
-                <p className="text-xs font-semibold text-profit mb-2">IBKR OPTIONS</p>
+              {/* Stream 1: IBKR */}
+              <div className="rounded-xl border-2 border-profit/30 bg-[oklch(0.50_0.20_155_/_0.03)] p-4 space-y-3">
+                <div className="text-center">
+                  <p className="text-sm font-bold text-profit">STREAM 1: IBKR OPTIONS</p>
+                  <p className="text-[10px] text-muted-foreground">Institutional flow trading</p>
+                </div>
+                <div className="rounded-lg bg-card border border-border p-3 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded bg-[oklch(0.55_0.18_175_/_0.1)] flex items-center justify-center text-[8px] font-bold text-teal">H</div>
+                    <div className="text-[10px]"><span className="font-semibold">Haiku Screen</span> <span className="text-muted-foreground">— every 60s, ~$0.001/call</span></div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded bg-[oklch(0.65_0.16_85_/_0.1)] flex items-center justify-center text-[8px] font-bold text-gold">S</div>
+                    <div className="text-[10px]"><span className="font-semibold">Sonnet Deep Analysis</span> <span className="text-muted-foreground">— 9 data streams + Kalshi sentiment</span></div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded bg-[oklch(0.52_0.22_25_/_0.1)] flex items-center justify-center text-[8px] font-bold text-loss">R</div>
+                    <div className="text-[10px]"><span className="font-semibold">Risk Manager</span> <span className="text-muted-foreground">— 7 safety checks</span></div>
+                  </div>
+                </div>
                 <div className="space-y-1 text-[10px] text-muted-foreground">
                   <p>Account: DU8395165 (paper)</p>
-                  <p>Port: 4002 (paper) / 4001 (live)</p>
-                  <p>Pool: $10,000 paper</p>
-                  <p>Jarrett: $5k / Jack: $5k / Craig: $0</p>
-                  <p>Max position: {maxPositionPct}% of portfolio</p>
-                  <p>Trades: Options (calls, puts)</p>
-                  <p>Mode: {botMode === "full_auto" ? "Full Auto" : botMode === "semi_auto" ? "Semi-Auto (85+ auto)" : "Manual Review"}</p>
+                  <p>Pool: $10k — Jarrett $5k / Jack $5k</p>
+                  <p>Max position: {maxPositionPct}% · Mode: {botMode === "full_auto" ? "Full Auto" : botMode === "semi_auto" ? "Semi-Auto" : "Manual"}</p>
+                  <p>Trades: Options (calls, puts, spreads)</p>
+                </div>
+                <div className="rounded-lg bg-[oklch(0.55_0.18_175_/_0.04)] border border-teal/20 p-2">
+                  <p className="text-[9px] font-semibold text-teal">READS FROM KALSHI:</p>
+                  <p className="text-[9px] text-muted-foreground">Prediction market sentiment confirms or contradicts flow signals</p>
                 </div>
               </div>
-              <div className="rounded-xl border-2 border-gold/20 bg-[oklch(0.65_0.16_85_/_0.03)] p-4">
-                <p className="text-xs font-semibold text-gold mb-2">KALSHI PREDICTIONS</p>
-                <div className="space-y-1 text-[10px] text-muted-foreground">
-                  <p>Account: Production (real money)</p>
-                  <p>Markets: Crypto, Climate, Economics</p>
-                  <p>Max per trade: $50</p>
-                  <p>Max contracts: 10 per market</p>
-                  <p>Auto-executes: edge 10%+ &amp; confidence 60+</p>
-                  <p>Scan frequency: Every 5 minutes</p>
-                  <p>Uses UW flow data for edge detection</p>
+
+              {/* Stream 2: Kalshi */}
+              <div className="rounded-xl border-2 border-gold/30 bg-[oklch(0.65_0.16_85_/_0.03)] p-4 space-y-3">
+                <div className="text-center">
+                  <p className="text-sm font-bold text-gold">STREAM 2: KALSHI PREDICTIONS</p>
+                  <p className="text-[10px] text-muted-foreground">Everything tradeable</p>
                 </div>
+                <div className="rounded-lg bg-card border border-border p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="w-5 h-5 rounded bg-[oklch(0.65_0.16_85_/_0.1)] flex items-center justify-center text-[8px] font-bold text-gold">S</div>
+                    <div className="text-[10px]"><span className="font-semibold">Sonnet Market Scanner</span> <span className="text-muted-foreground">— every 5 min</span></div>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {["Crypto", "Economics", "Finance", "Geopolitics", "Sports", "Weather", "Culture", "Tech"].map((c) => (
+                      <span key={c} className="text-[8px] font-mono px-1.5 py-0.5 rounded-full bg-[oklch(0.65_0.16_85_/_0.08)] border border-gold/20 text-gold">{c}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1 text-[10px] text-muted-foreground">
+                  <p>Account: Production (real $)</p>
+                  <p>Max: $100/market, 15 positions</p>
+                  <p>Auto-trades: edge 8%+ &amp; confidence 55+</p>
+                  <p>Scans 1000+ markets every 5 min</p>
+                </div>
+                <div className="rounded-lg bg-[oklch(0.65_0.16_85_/_0.04)] border border-gold/20 p-2">
+                  <p className="text-[9px] font-semibold text-gold">READS FROM IBKR:</p>
+                  <p className="text-[9px] text-muted-foreground">Today's IBKR signals + UW flow inform prediction market edge detection</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Cross-reference arrow */}
+            <div className="mx-auto max-w-md rounded-xl border border-dashed border-muted-foreground/30 p-3 text-center">
+              <p className="text-[10px] font-semibold text-foreground">CROSS-REFERENCE EXAMPLES</p>
+              <div className="space-y-1 mt-1.5 text-[9px] text-muted-foreground">
+                <p>SPY put sweeps $5M + Kalshi "S&P drops 2%" at 40¢ = both streams see bearish = higher conviction both sides</p>
+                <p>IBKR signal: NVDA bullish 85 confidence + Kalshi "NVDA beats earnings" at 55¢ = Kalshi underpriced = buy YES</p>
+                <p>Kalshi "Fed cuts rates" at 80¢ + TLT call flow surging = rates going down = IBKR buys TLT calls</p>
               </div>
             </div>
           </div>

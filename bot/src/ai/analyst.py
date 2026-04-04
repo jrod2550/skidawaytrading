@@ -94,9 +94,10 @@ GREEK EXPOSURE (GEX), VOLATILITY & EARNINGS:
 {greeks_vol_data}
 (Note: If "upcoming_earnings" is present above, it contains this ticker's next earnings dates. Factor this into your analysis — IV typically expands 5-10 days before earnings and crushes immediately after.)
 
-MARKET-WIDE CONTEXT (tide, top movers, economic calendar):
+MARKET-WIDE CONTEXT (tide, top movers, economic calendar, prediction markets):
 {market_context}
 (Note: If "economic_calendar" is present above, these are upcoming macro events. FOMC, CPI, NFP, and GDP are HIGH IMPACT — they can move the entire market and spike/crush IV across all tickers.)
+(Note: If "kalshi_sentiment" is present above, this is the latest analysis from our prediction market AI. Prediction market consensus can confirm or contradict options flow signals. If both prediction markets AND options flow agree on direction, that's a much stronger signal.)
 
 ANALYSIS REQUIREMENTS:
 1. Cross-reference flow direction with dark pool activity. Alignment = higher conviction.

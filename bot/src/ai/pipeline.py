@@ -473,6 +473,26 @@ class AIPipeline:
         if earnings:
             greeks_vol["upcoming_earnings"] = earnings[:3] if isinstance(earnings, list) else []
 
+        # Cross-reference: pull Kalshi prediction market sentiment
+        try:
+            kalshi_signals = (
+                self.db.table("ai_activity")
+                .select("ticker, ai_reasoning, confidence_score, details")
+                .like("ticker", "KALSHI%")
+                .eq("event_type", "deep_analysis")
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if kalshi_signals.data:
+                latest = kalshi_signals.data[0]
+                market_context["kalshi_sentiment"] = {
+                    "latest_analysis": latest.get("ai_reasoning", ""),
+                    "confidence": latest.get("confidence_score"),
+                }
+        except Exception:
+            pass
+
         return congressional_data, related_flow, dark_pool, greeks_vol, market_context
 
     def _parse_strike(self, strike_selection: str | None, alert: dict) -> float | None:
