@@ -136,8 +136,8 @@ Six categories of intelligence gathered by `pipeline._gather_intel()`:
 2. **Congressional/Insider Data** — any matching congressional trades or C-suite transactions
 3. **Related Flow** — up to 8 other recent flow alerts on the same ticker
 4. **Dark Pool Prints** — up to 5 recent dark pool transactions on the ticker
-5. **GEX/IV Data** — gamma exposure, IV rank, volatility statistics
-6. **Market Context** — overall market tide (bullish/bearish flow), top net impact movers
+5. **GEX/IV/Earnings Data** — gamma exposure, IV rank, volatility statistics, upcoming earnings dates for this ticker
+6. **Market Context** — overall market tide (bullish/bearish flow), top net impact movers, upcoming economic events (FOMC, CPI, NFP, GDP)
 
 ### The System Prompt (The Agent's DNA)
 
@@ -283,6 +283,8 @@ Congressional trades skip Haiku screening entirely — they go straight to Sonne
 | `/api/market/tide` | Intel Gathering | Market sentiment |
 | `/api/market/top-net-impact` | Intel Gathering | Top movers |
 | `/api/insiders/{ticker}` | Intel Gathering | Insider transactions |
+| `/api/market/economic-calendar` | Intel Gathering + Dashboard | FOMC, CPI, GDP, jobs reports |
+| `/api/earnings/{ticker}` | Intel Gathering | Ticker-specific earnings dates |
 | `/api/etf/sectors` | Dashboard API | Sector performance |
 
 ### Available But Not Yet Integrated
@@ -294,7 +296,7 @@ Congressional trades skip Haiku screening entirely — they go straight to Sonne
 | `/api/stock/{ticker}/net-premium-ticks` | Real-time call/put sentiment |
 | `/api/darkpool/recent` | Market-wide dark pool feed |
 | `/api/market/sector-tide` | Sector-level flow sentiment |
-| ~~`/api/market/economic-calendar`~~ | **Now active** — included in every deep analysis |
+| `/api/market/sector-tide` | Sector-level flow sentiment |
 | `/api/market/fda-calendar` | FDA catalysts |
 | `/api/earnings/{ticker}` | Earnings dates and history |
 | `/api/short/{ticker}/interest` | Short interest / squeeze data |
@@ -426,7 +428,7 @@ Signal marked "executed"
 
 - ~~Confidence threshold gap~~ — Fixed: pipeline and risk manager both use 70+
 - ~~Sequential intel gathering~~ — Fixed: now runs all API calls in parallel
-- ~~Economic calendar~~ — Fixed: now included in every deep analysis
+- ~~Economic calendar~~ — Fixed: macro events + ticker earnings in every deep analysis
 
 ### Important (Should Fix Soon)
 
