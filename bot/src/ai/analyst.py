@@ -19,7 +19,7 @@ from src.config import settings
 logger = logging.getLogger(__name__)
 
 HAIKU = "claude-haiku-4-5-20251001"
-SONNET = "claude-sonnet-4-5-20250514"
+SONNET = "claude-sonnet-4-6"
 
 SYSTEM_PROMPT = """You are a senior quantitative options flow analyst at Skidaway Trading, an institutional-style options fund.
 
@@ -198,8 +198,8 @@ class ClaudeAnalyst:
         try:
             # Try requested model, then fallbacks
             FALLBACKS = {
-                HAIKU: [HAIKU, "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
-                SONNET: [SONNET, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022"],
+                HAIKU: [HAIKU, "claude-3-haiku-20240307"],
+                SONNET: [SONNET, "claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-3-haiku-20240307"],
             }
             models_to_try = FALLBACKS.get(model, [model, "claude-3-haiku-20240307"])
             data = None

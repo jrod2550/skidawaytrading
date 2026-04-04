@@ -207,7 +207,7 @@ class KalshiPipeline:
 
         try:
             # Try multiple models with fallback
-            MODELS = [SONNET, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"]
+            MODELS = [SONNET, "claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-3-haiku-20240307"]
             data = None
 
             for model in MODELS:

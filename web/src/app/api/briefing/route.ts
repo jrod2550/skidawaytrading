@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const UW_BASE = "https://api.unusualwhales.com";
-const SONNET = "claude-sonnet-4-5-20250514";
+const SONNET = "claude-sonnet-4-6";
 
 async function uwFetch(path: string, apiKey: string) {
   const resp = await fetch(`${UW_BASE}${path}`, {
@@ -206,7 +206,7 @@ Rules:
 - Cite "Unusual Whales flow data" or "congressional disclosure filings" when referencing sources`;
 
     // Try models from best to most broadly available
-    const MODELS = [SONNET, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"];
+    const MODELS = [SONNET, "claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-3-haiku-20240307"];
     let claudeResp: Response | null = null;
     let usedModel = SONNET;
 
