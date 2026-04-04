@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,11 +78,14 @@ export default function KalshiPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Kalshi Predictions</h2>
-        <p className="text-muted-foreground">
-          AI-powered prediction market trading — crypto, climate, economics
-        </p>
+      <div className="flex items-center gap-3">
+        <Image src="/kalshi.png" alt="Kalshi" width={36} height={36} className="rounded-lg" />
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Kalshi Predictions</h2>
+          <p className="text-muted-foreground">
+            AI-powered prediction market trading — crypto, climate, economics
+          </p>
+        </div>
       </div>
 
       {/* Stats */}
