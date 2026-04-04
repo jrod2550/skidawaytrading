@@ -233,28 +233,117 @@ export default function KalshiPage() {
                 </button>
 
                 {isExpanded && (
-                  <div className="px-5 pb-5 pt-0 border-t border-border mt-0 pt-4 space-y-3">
+                  <div className="px-5 pb-5 pt-0 border-t border-border mt-0 pt-4 space-y-4">
+                    {/* AI Analysis / Cross-Reference Insights */}
                     {event.ai_reasoning && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">AI Reasoning</p>
-                        <p className="text-sm leading-relaxed">{event.ai_reasoning}</p>
+                      <div className="rounded-lg bg-[oklch(0.97_0.003_90)] border border-[oklch(0.92_0.006_90)] p-4">
+                        <p className="text-[10px] uppercase tracking-wide text-teal font-semibold mb-2">AI Analysis</p>
+                        <div className="text-sm leading-relaxed space-y-2">
+                          {event.ai_reasoning.split("\n").filter(Boolean).map((paragraph, i) => {
+                            // Check if it starts with "Cross-reference:"
+                            if (paragraph.trim().startsWith("Cross-reference:") || paragraph.trim().startsWith("Cross-Reference:")) {
+                              return (
+                                <div key={i} className="rounded-md bg-[oklch(0.55_0.18_175_/_0.04)] border border-teal/15 p-3 mt-2">
+                                  <p className="text-[9px] uppercase tracking-wide text-teal font-semibold mb-1">Cross-Reference Intelligence</p>
+                                  <p className="text-xs leading-relaxed">{paragraph.replace(/^Cross-[Rr]eference:\s*/, "")}</p>
+                                </div>
+                              );
+                            }
+                            return <p key={i}>{paragraph}</p>;
+                          })}
+                        </div>
                       </div>
                     )}
-                    {details.edge_pct != null && (
-                      <div className="flex gap-4 text-xs font-mono">
-                        <span>Edge: <span className="text-profit">{String(details.edge_pct)}%</span></span>
-                        {details.estimated_prob != null && <span>Est prob: {String(details.estimated_prob)}%</span>}
-                        {details.price_cents != null && <span>Market: {String(details.price_cents)}¢</span>}
+
+                    {/* Trade Metrics */}
+                    {(details.edge_pct != null || details.estimated_prob != null || details.price_cents != null) && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {details.edge_pct != null && (
+                          <div className="rounded-md bg-muted px-3 py-2 text-center">
+                            <p className="text-[9px] uppercase text-muted-foreground">Edge</p>
+                            <p className="text-sm font-mono font-bold text-profit">{String(details.edge_pct)}%</p>
+                          </div>
+                        )}
+                        {details.estimated_prob != null && (
+                          <div className="rounded-md bg-muted px-3 py-2 text-center">
+                            <p className="text-[9px] uppercase text-muted-foreground">AI Estimate</p>
+                            <p className="text-sm font-mono font-bold">{String(details.estimated_prob)}%</p>
+                          </div>
+                        )}
+                        {details.price_cents != null && (
+                          <div className="rounded-md bg-muted px-3 py-2 text-center">
+                            <p className="text-[9px] uppercase text-muted-foreground">Market Price</p>
+                            <p className="text-sm font-mono font-bold text-gold">{String(details.price_cents)}¢</p>
+                          </div>
+                        )}
+                        {details.contracts != null && (
+                          <div className="rounded-md bg-muted px-3 py-2 text-center">
+                            <p className="text-[9px] uppercase text-muted-foreground">Contracts</p>
+                            <p className="text-sm font-mono font-bold">{String(details.contracts)}x</p>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {Object.keys(details).length > 0 && (
+
+                    {/* Suggested Trade Card */}
+                    {(typeof details.side === "string" || typeof details.recommendation === "string") && (
+                      <div className={`rounded-lg border-2 p-4 ${
+                        details.side === "yes" || String(details.recommendation ?? "").includes("YES")
+                          ? "border-profit/30 bg-[oklch(0.50_0.20_155_/_0.03)]"
+                          : "border-loss/30 bg-[oklch(0.52_0.22_25_/_0.03)]"
+                      }`}>
+                        <p className="text-[9px] uppercase tracking-wide text-gold font-semibold mb-2">Suggested Trade</p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge variant="outline" className={`text-xs px-2 py-0.5 ${
+                            details.side === "yes" || String(details.recommendation ?? "").includes("YES")
+                              ? "border-profit text-profit"
+                              : "border-loss text-loss"
+                          }`}>
+                            {String(details.recommendation || `BUY ${String(details.side ?? "").toUpperCase()}`)}
+                          </Badge>
+                          {details.contracts != null && (
+                            <span className="text-sm font-mono">{String(details.contracts)}x contracts</span>
+                          )}
+                          {details.price_cents != null && (
+                            <span className="text-sm font-mono">@ {String(details.price_cents)}¢</span>
+                          )}
+                          {typeof details.category === "string" && (
+                            <Badge variant="outline" className="text-[9px] border-gold text-gold">{details.category}</Badge>
+                          )}
+                        </div>
+                        {typeof details.cross_reference === "string" && details.cross_reference && (
+                          <p className="text-[10px] text-muted-foreground mt-2">
+                            UW Cross-ref: {details.cross_reference}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Signal Created — show market summary for scan results */}
+                    {event.event_type === "signal_created" && details.markets_scanned != null && (
+                      <div className="text-xs font-mono text-muted-foreground flex flex-wrap gap-3">
+                        <span>Scanned: {String(details.markets_scanned ?? "")}</span>
+                        <span>Analyzed: {String(details.markets_analyzed ?? "")}</span>
+                        <span>Trades: {String(details.trades_placed ?? "0")}</span>
+                        <span>Recs: {String(details.recommendations ?? "0")}</span>
+                        {Array.isArray(details.categories_found) && (
+                          <span>Categories: {(details.categories_found as string[]).join(", ")}</span>
+                        )}
+                        {typeof details.model === "string" && (
+                          <span>Model: <span className="text-teal">{details.model}</span></span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Raw details for other event types */}
+                    {event.event_type === "error" && Object.keys(details).length > 0 && (
                       <div>
-                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Details</p>
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Error Details</p>
                         <div className="text-xs font-mono bg-muted rounded-md px-3 py-2 space-y-0.5">
-                          {Object.entries(details).map(([k, v]) => (
-                            <div key={k} className="flex justify-between">
-                              <span className="text-muted-foreground">{k.replace(/_/g, " ")}</span>
-                              <span>{String(v ?? "")}</span>
+                          {Object.entries(details).filter(([k]) => k !== "traceback").map(([k, v]) => (
+                            <div key={k} className="flex justify-between gap-4">
+                              <span className="text-muted-foreground flex-shrink-0">{k.replace(/_/g, " ")}</span>
+                              <span className="text-right truncate">{String(v ?? "")}</span>
                             </div>
                           ))}
                         </div>
