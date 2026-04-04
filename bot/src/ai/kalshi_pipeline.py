@@ -294,9 +294,11 @@ class KalshiPipeline:
                     logger.info("Kalshi analysis using model: %s", model)
                     break
                 except Exception as model_err:
-                    if "not_found" in str(model_err).lower() or "404" in str(model_err):
+                    err_str = str(model_err)
+                    if "not_found" in err_str.lower() or "404" in err_str:
                         logger.warning("Model %s not available, trying next...", model)
                         continue
+                    logger.error("Model %s failed with: %s", model, err_str[:200])
                     raise
 
             if not data:
@@ -316,8 +318,10 @@ class KalshiPipeline:
 
             analysis = json.loads(text.strip())
         except Exception as e:
-            logger.error("Kalshi AI analysis failed: %s", e)
-            self._log_activity("error", details={"error": str(e), "type": "kalshi_analysis"})
+            import traceback
+            err_detail = traceback.format_exc()
+            logger.error("Kalshi AI analysis failed: %s\n%s", e, err_detail)
+            self._log_activity("error", details={"error": str(e) or repr(e), "traceback": err_detail[-500:], "type": "kalshi_analysis"})
             return 0
 
         # Log cross-reference insights
