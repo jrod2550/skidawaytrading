@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 # Minimum Haiku score to escalate to Sonnet
 HAIKU_THRESHOLD = 50
 
-# Minimum Sonnet confidence to create a signal
-SIGNAL_THRESHOLD = 65
+# Minimum Sonnet confidence to create a signal (matches risk manager default)
+SIGNAL_THRESHOLD = 70
 
 # Premium floor — lower for individual stocks, higher for indexes
 MIN_PREMIUM = 10_000
@@ -362,70 +362,92 @@ class AIPipeline:
         return new_signals
 
     async def _gather_intel(self, ticker: str) -> tuple[dict | None, list[dict], list[dict], dict, dict]:
-        """Gather all available intelligence for a ticker.
+        """Gather all available intelligence for a ticker in parallel.
 
         Returns: (congressional_data, related_flow, dark_pool, greeks_vol, market_context)
         """
+        import asyncio
+
         congressional_data = None
         related_flow: list[dict] = []
         dark_pool: list[dict] = []
         greeks_vol: dict = {}
         market_context: dict = {}
 
-        # Gather everything in parallel where possible
-        try:
-            trades = await self.uw.get_congressional_trades()
-            for t in trades:
-                if t.get("ticker", "").upper() == ticker.upper():
-                    congressional_data = t
-                    break
-        except Exception:
-            pass
+        # Define all fetch tasks
+        async def fetch_congressional():
+            try:
+                trades = await self.uw.get_congressional_trades()
+                for t in trades:
+                    if t.get("ticker", "").upper() == ticker.upper():
+                        return t
+            except Exception:
+                pass
+            return None
 
-        try:
-            flow = await self.uw.get_flow_alerts(ticker)
-            related_flow = flow[:8]
-        except Exception:
-            pass
+        async def fetch_flow():
+            try:
+                flow = await self.uw.get_flow_alerts(ticker)
+                return flow[:8]
+            except Exception:
+                return []
 
-        try:
-            dp = await self.uw.get_dark_pool_ticker(ticker)
-            dark_pool = dp[:5] if dp else []
-        except Exception:
-            pass
+        async def fetch_dark_pool():
+            try:
+                dp = await self.uw.get_dark_pool_ticker(ticker)
+                return dp[:5] if dp else []
+            except Exception:
+                return []
 
-        try:
-            gex = await self.uw.get_greek_exposure(ticker)
-            iv_rank = await self.uw.get_iv_rank(ticker)
-            vol_stats = await self.uw.get_volatility_stats(ticker)
-            greeks_vol = {
-                "gex": gex,
-                "iv_rank": iv_rank,
-                "vol_stats": vol_stats,
-            }
-        except Exception:
-            pass
+        async def fetch_greeks():
+            try:
+                gex = await self.uw.get_greek_exposure(ticker)
+                iv_rank = await self.uw.get_iv_rank(ticker)
+                vol_stats = await self.uw.get_volatility_stats(ticker)
+                return {"gex": gex, "iv_rank": iv_rank, "vol_stats": vol_stats}
+            except Exception:
+                return {}
 
-        try:
-            tide = await self.uw.get_market_tide()
-            top_impact = await self.uw.get_top_net_impact()
-            market_context = {
-                "market_tide": tide,
-                "top_net_impact": top_impact[:5] if isinstance(top_impact, list) else [],
-            }
-        except Exception:
-            pass
+        async def fetch_market():
+            try:
+                tide = await self.uw.get_market_tide()
+                top_impact = await self.uw.get_top_net_impact()
+                return {
+                    "market_tide": tide,
+                    "top_net_impact": top_impact[:5] if isinstance(top_impact, list) else [],
+                }
+            except Exception:
+                return {}
 
-        # Also check for insider activity
-        try:
-            insiders = await self.uw.get_insider_ticker(ticker)
-            if insiders:
-                if congressional_data is None:
-                    congressional_data = {"insider_transactions": insiders[:3]}
-                else:
-                    congressional_data["insider_transactions"] = insiders[:3]
-        except Exception:
-            pass
+        async def fetch_insiders():
+            try:
+                return await self.uw.get_insider_ticker(ticker)
+            except Exception:
+                return []
+
+        # Run ALL fetches in parallel
+        results = await asyncio.gather(
+            fetch_congressional(),
+            fetch_flow(),
+            fetch_dark_pool(),
+            fetch_greeks(),
+            fetch_market(),
+            fetch_insiders(),
+        )
+
+        congressional_data = results[0]
+        related_flow = results[1]
+        dark_pool = results[2]
+        greeks_vol = results[3]
+        market_context = results[4]
+        insiders = results[5]
+
+        # Attach insider data
+        if insiders:
+            if congressional_data is None:
+                congressional_data = {"insider_transactions": insiders[:3]}
+            else:
+                congressional_data["insider_transactions"] = insiders[:3]
 
         return congressional_data, related_flow, dark_pool, greeks_vol, market_context
 
