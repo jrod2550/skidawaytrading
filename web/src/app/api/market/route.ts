@@ -19,9 +19,10 @@ export async function GET() {
   }
 
   try {
-    const [flowAlerts, sectorData] = await Promise.all([
+    const [flowAlerts, sectorData, econCalendar] = await Promise.all([
       uwFetch("/api/option-trades/flow-alerts", apiKey),
       uwFetch("/api/etf/sectors", apiKey),
+      uwFetch("/api/market/economic-calendar", apiKey),
     ]);
 
     // Determine market status based on current time (US Eastern)
@@ -123,6 +124,22 @@ export async function GET() {
         }))
       : [];
 
+    // Upcoming economic events
+    const events = Array.isArray(econCalendar)
+      ? econCalendar
+          .slice(0, 10)
+          .map((e: Record<string, unknown>) => ({
+            name: e.name ?? e.event ?? e.title,
+            date: e.date ?? e.event_date ?? e.release_date,
+            time: e.time ?? e.event_time,
+            importance: e.importance ?? e.impact ?? "medium",
+            forecast: e.forecast ?? e.consensus,
+            previous: e.previous ?? e.prior,
+            actual: e.actual,
+            country: e.country ?? "US",
+          }))
+      : [];
+
     return NextResponse.json({
       market_status: marketStatus,
       market_time: new Intl.DateTimeFormat("en-US", {
@@ -133,6 +150,7 @@ export async function GET() {
       }).format(now),
       top_flow: topFlow,
       sectors,
+      events,
     });
   } catch (error) {
     return NextResponse.json(

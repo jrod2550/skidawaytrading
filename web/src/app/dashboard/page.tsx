@@ -200,11 +200,23 @@ interface SectorData {
   change_pct: number;
 }
 
+interface EconEvent {
+  name: string;
+  date: string;
+  time: string | null;
+  importance: string;
+  forecast: string | null;
+  previous: string | null;
+  actual: string | null;
+  country: string;
+}
+
 interface MarketData {
   market_status: string;
   market_time: string;
   top_flow: FlowAlert[];
   sectors: SectorData[];
+  events: EconEvent[];
 }
 
 export default function DashboardOverview() {
@@ -750,6 +762,55 @@ export default function DashboardOverview() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* ── Upcoming Economic Events ───────────────── */}
+      {market && market.events && market.events.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[11px] font-medium tracking-[0.15em] uppercase text-sand">
+                Upcoming Economic Events
+              </h3>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                macro calendar
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {market.events.map((event, i) => {
+                const isHigh = String(event.importance).toLowerCase().includes("high");
+                const isMed = String(event.importance).toLowerCase().includes("med");
+                return (
+                  <div
+                    key={`${event.name}-${event.date}-${i}`}
+                    className="flex items-center gap-3 rounded-md px-3 py-2.5 bg-[oklch(0.97_0.003_90)] border border-[oklch(0.92_0.006_90)]"
+                  >
+                    <div className={`flex-shrink-0 w-2 h-2 rounded-full ${
+                      isHigh ? "bg-loss" : isMed ? "bg-gold" : "bg-muted-foreground"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium truncate">{String(event.name ?? "")}</span>
+                        {isHigh && (
+                          <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-loss text-loss">
+                            HIGH IMPACT
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 text-[10px] font-mono text-muted-foreground">
+                        <span>{String(event.date ?? "")}</span>
+                        {event.time && <span>{String(event.time)}</span>}
+                        {event.forecast != null && <span>Fcst: {String(event.forecast)}</span>}
+                        {event.previous != null && <span>Prev: {String(event.previous)}</span>}
+                        {event.actual != null && <span className="text-foreground font-semibold">Act: {String(event.actual)}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
