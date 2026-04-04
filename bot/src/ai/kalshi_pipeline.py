@@ -101,27 +101,29 @@ YOUR TASK:
 3. For any market with edge >= 8%, recommend a trade.
 4. Cross-reference categories: does options flow data inform any prediction markets? Do prediction market prices inform any options thesis?
 
-Respond in JSON:
+IMPORTANT: Respond ONLY with valid JSON. No text before or after. No trailing commas. Keep it compact.
+
 {{
-  "cross_reference_insights": "2-3 sentences on how options flow and prediction markets inform each other right now",
+  "cross_reference_insights": "1-2 sentences",
   "analysis": [
     {{
-      "ticker": "MARKET-TICKER",
-      "title": "market description",
+      "ticker": "TICKER",
+      "title": "short description",
       "market_price_yes_cents": 65,
       "your_estimated_probability": 80,
       "edge_pct": 15,
-      "recommendation": "BUY YES" or "BUY NO" or "SKIP",
+      "recommendation": "BUY YES",
       "contracts": 5,
-      "max_cost_cents": 325,
-      "reasoning": "2-3 sentences citing specific data — flow, signals, or market context",
-      "confidence": 0-100,
-      "category": "crypto" | "economics" | "finance" | "geopolitics" | "sports" | "weather" | "culture" | "tech",
-      "cross_reference": "what options/flow data informed this prediction, if any"
+      "reasoning": "1-2 sentences max",
+      "confidence": 75,
+      "category": "crypto",
+      "cross_reference": "brief note or null"
     }}
   ],
-  "market_summary": "2-3 sentence overall prediction market thesis across all categories"
-}}"""
+  "market_summary": "1-2 sentences"
+}}
+
+Only include markets where recommendation is NOT "SKIP". Max 5 recommendations."""
 
 
 class KalshiPipeline:
