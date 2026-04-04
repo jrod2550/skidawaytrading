@@ -93,15 +93,16 @@ DARK POOL ACTIVITY ON THIS TICKER:
 GREEK EXPOSURE (GEX) & VOLATILITY:
 {greeks_vol_data}
 
-MARKET-WIDE CONTEXT (tide, top movers):
+MARKET-WIDE CONTEXT (tide, top movers, economic calendar):
 {market_context}
 
 ANALYSIS REQUIREMENTS:
 1. Cross-reference flow direction with dark pool activity. Alignment = higher conviction.
 2. Check GEX positioning — is the market/stock in positive or negative gamma territory?
 3. Evaluate IV rank — is premium expensive or cheap? Should we buy or sell premium?
-4. Flag any upcoming earnings or macro events.
-5. Consider the current market tide — is this trade with or against the macro flow?
+4. CHECK ECONOMIC CALENDAR — flag FOMC, CPI, PPI, jobs, GDP. If a macro event is within 3 days, note the risk of holding through it. Major events can crush or spike IV.
+5. CHECK EARNINGS — if the ticker has earnings within 14 days, flag it. Pre-earnings IV expansion can help or hurt depending on entry timing. Post-earnings IV crush is real.
+6. Consider the current market tide — is this trade with or against the macro flow?
 
 Respond in JSON:
 {{

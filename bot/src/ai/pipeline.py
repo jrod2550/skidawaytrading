@@ -425,6 +425,12 @@ class AIPipeline:
             except Exception:
                 return []
 
+        async def fetch_econ_calendar():
+            try:
+                return await self.uw.get_economic_calendar()
+            except Exception:
+                return []
+
         # Run ALL fetches in parallel
         results = await asyncio.gather(
             fetch_congressional(),
@@ -433,6 +439,7 @@ class AIPipeline:
             fetch_greeks(),
             fetch_market(),
             fetch_insiders(),
+            fetch_econ_calendar(),
         )
 
         congressional_data = results[0]
@@ -441,6 +448,7 @@ class AIPipeline:
         greeks_vol = results[3]
         market_context = results[4]
         insiders = results[5]
+        econ_calendar = results[6]
 
         # Attach insider data
         if insiders:
@@ -448,6 +456,10 @@ class AIPipeline:
                 congressional_data = {"insider_transactions": insiders[:3]}
             else:
                 congressional_data["insider_transactions"] = insiders[:3]
+
+        # Attach economic calendar to market context
+        if econ_calendar:
+            market_context["economic_calendar"] = econ_calendar[:5] if isinstance(econ_calendar, list) else []
 
         return congressional_data, related_flow, dark_pool, greeks_vol, market_context
 

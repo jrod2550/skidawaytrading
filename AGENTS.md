@@ -294,7 +294,7 @@ Congressional trades skip Haiku screening entirely — they go straight to Sonne
 | `/api/stock/{ticker}/net-premium-ticks` | Real-time call/put sentiment |
 | `/api/darkpool/recent` | Market-wide dark pool feed |
 | `/api/market/sector-tide` | Sector-level flow sentiment |
-| `/api/market/economic-calendar` | Macro events (FOMC, CPI, etc.) |
+| ~~`/api/market/economic-calendar`~~ | **Now active** — included in every deep analysis |
 | `/api/market/fda-calendar` | FDA catalysts |
 | `/api/earnings/{ticker}` | Earnings dates and history |
 | `/api/short/{ticker}/interest` | Short interest / squeeze data |
@@ -416,23 +416,150 @@ Signal marked "executed"
 
 ## Known Limitations & Roadmap
 
-### Critical (Should Fix Before Going Live)
+### Critical (Should Fix Before Going Live With Real Money)
 
 1. **No stop-loss enforcement** — AI recommends -30% stops but nothing monitors and closes positions
 2. **No spread orders** — AI recommends spreads, builder only places single legs
-3. **Confidence threshold gap** — Pipeline creates at 65, risk blocks at 70. Signals at 65-69 get stuck as "approved" forever
-4. **No limit price on orders** — Orders may execute as market orders
+3. **No limit price on orders** — Orders may execute as market orders
+
+### Fixed
+
+- ~~Confidence threshold gap~~ — Fixed: pipeline and risk manager both use 70+
+- ~~Sequential intel gathering~~ — Fixed: now runs all API calls in parallel
+- ~~Economic calendar~~ — Fixed: now included in every deep analysis
 
 ### Important (Should Fix Soon)
 
-5. **Sequential intel gathering** — 7 API calls run sequentially instead of parallel
-6. **Position sync race condition** — Full delete-reinsert during sync creates a window where positions appear empty
-7. **No duplicate trade protection** — If signal marking fails after execution, signal re-executes on next tick
-8. **Rep history never populated** — Congressional prompt has a slot but receives empty data
+4. **Position sync race condition** — Full delete-reinsert during sync creates a window where positions appear empty
+5. **No duplicate trade protection** — If signal marking fails after execution, signal re-executes on next tick
+6. **Rep history never populated** — Congressional prompt has a slot but receives empty data
 
 ### Nice to Have
 
-9. **NOPE integration** — Strong short-term signal not yet used
-10. **Economic calendar awareness** — Bot doesn't know about FOMC, CPI, earnings dates
-11. **Weekly Opus review** — Mentioned but never built
-12. **WebSocket streaming** — Currently polling every 60s, could be real-time
+7. **NOPE integration** — Strong short-term signal not yet used
+8. **Weekly Opus review** — Mentioned but never built
+9. **WebSocket streaming** — Currently polling every 60s, could be real-time
+
+---
+
+## Going Live: Paper → Real Money on IBKR
+
+### How The IBKR Connection Works
+
+The bot connects to IBKR through **IB Gateway** (or TWS), which is a Java application running on the NUC. IB Gateway acts as a bridge between the bot's Python code and IBKR's servers.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  NUC (192.168.1.159)                                             │
+│                                                                  │
+│  Python Bot                                                      │
+│     │                                                            │
+│     │ ib_insync library (Python)                                 │
+│     │ connects via TCP to localhost                               │
+│     │                                                            │
+│     ▼                                                            │
+│  IB Gateway (Java)                                               │
+│     │ Port 4002 = PAPER trading                                  │
+│     │ Port 4001 = LIVE trading                                   │
+│     │                                                            │
+│     │ Authenticated via IBC (auto-login)                         │
+│     │ Credentials in ~/ibc/config.ini                            │
+│     │                                                            │
+│     ▼                                                            │
+│  IBKR Servers (internet)                                         │
+│     │                                                            │
+│     ├── Paper Account: DU8395165 (current)                       │
+│     │   └── Fake money, fake executions, real market data        │
+│     │                                                            │
+│     └── Live Account: (your real account)                        │
+│         └── Real money, real executions, real P&L                │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### What Changes When Going Live
+
+Only **two things** change:
+
+1. **Port number:** `4002` (paper) → `4001` (live)
+   - In `bot/src/config.py`: change `ibkr_port: int = 4002` to `4001`
+   - Or set `IBKR_PORT=4001` in `~/skidawaytrading/.env` on the NUC
+
+2. **IBC config:** `TradingMode=paper` → `TradingMode=live`
+   - In `~/ibc/config.ini` on the NUC
+
+That's it. Same code, same AI, same risk manager. The only difference is the port number tells IB Gateway to connect to your live account instead of paper.
+
+### What The Bot Actually Sends To IBKR
+
+When a trade is approved, here's the exact interaction:
+
+```python
+# 1. Bot qualifies the contract with IBKR
+contract = Option(
+    symbol="NVDA",                    # ticker
+    lastTradeDateOrContractMonth="20260515",  # expiry (YYYYMMDD)
+    strike=130.0,                     # strike price
+    right="C",                        # C=call, P=put
+    exchange="SMART",                 # IBKR smart routing
+    currency="USD"
+)
+ib.qualifyContracts(contract)  # IBKR validates this contract exists
+
+# 2. Bot places the order
+order = Order(
+    action="BUY",          # BUY or SELL
+    totalQuantity=2,       # number of contracts
+    orderType="LMT",       # LMT (limit) or MKT (market)
+    lmtPrice=3.50          # limit price per share (x100 for contract)
+)
+trade = ib.placeOrder(contract, order)
+
+# 3. Bot waits 3 seconds, checks for fill
+ib.sleep(3)
+if trade.fills:
+    fill_price = trade.fills[0].execution.price  # actual fill
+    commission = sum(f.commissionReport.commission for f in trade.fills)
+```
+
+### IBKR Safety Features (Built Into The Broker, Not Our Code)
+
+Even if our bot goes haywire, IBKR has its own protections:
+- **Margin requirements** — IBKR won't let you buy what you can't afford
+- **Pattern Day Trader rules** — applies to accounts < $25k
+- **Order size limits** — configurable in TWS/Gateway settings
+- **Account-level loss limits** — you can set these in IBKR Account Management
+- **Kill switch** — you can always log into IBKR and cancel all orders manually
+
+### Pre-Live Checklist
+
+Before switching from paper to live, verify:
+
+- [ ] Paper traded for at least 2-4 weeks with no unexpected behavior
+- [ ] Stop-loss enforcement code is implemented and tested
+- [ ] Limit prices are set on all orders (no market orders)
+- [ ] Daily loss circuit breaker triggers correctly
+- [ ] Signals page shows accurate AI reasoning for past trades
+- [ ] Win rate on paper trades is acceptable
+- [ ] All three members (Jarrett, Craig, Jack) agree on risk profile
+- [ ] IBKR account has margin enabled for options
+- [ ] Account-level loss limits set in IBKR Account Management
+- [ ] Emergency plan: know how to SSH in and run `sudo systemctl stop skidaway-bot`
+
+### Emergency Stop
+
+If anything goes wrong with real money:
+
+```bash
+# Option 1: Stop the bot (trades stop, positions stay open)
+ssh jarrett@192.168.1.159
+sudo systemctl stop skidaway-bot
+
+# Option 2: Stop everything including IB Gateway
+sudo systemctl stop skidaway-bot ibgateway
+
+# Option 3: From the dashboard
+# Go to Settings → toggle "Bot Paused" to true
+
+# Option 4: From IBKR directly
+# Log into IBKR on your phone → Cancel All Orders
+```
