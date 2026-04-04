@@ -101,29 +101,33 @@ YOUR TASK:
 3. For any market with edge >= 8%, recommend a trade.
 4. Cross-reference categories: does options flow data inform any prediction markets? Do prediction market prices inform any options thesis?
 
-IMPORTANT: Respond ONLY with valid JSON. No text before or after. No trailing commas. Keep it compact.
+CRITICAL: Respond ONLY with a single valid JSON object. No markdown, no code fences, no text before or after the JSON. No trailing commas before ] or }}.
 
 {{
-  "cross_reference_insights": "1-2 sentences",
+  "cross_reference_insights": "2-3 sentences on how UW options flow and Kalshi prediction markets inform each other right now. Be specific about tickers and data.",
   "analysis": [
     {{
-      "ticker": "TICKER",
-      "title": "short description",
+      "ticker": "MARKET-TICKER",
+      "title": "full market description",
       "market_price_yes_cents": 65,
       "your_estimated_probability": 80,
       "edge_pct": 15,
       "recommendation": "BUY YES",
       "contracts": 5,
-      "reasoning": "1-2 sentences max",
+      "reasoning": "2-3 detailed sentences citing specific data — options flow premiums, dark pool prints, institutional positioning, macro events. Explain WHY the market is mispriced.",
       "confidence": 75,
       "category": "crypto",
-      "cross_reference": "brief note or null"
+      "cross_reference": "what UW flow or IBKR signal data informed this, or null"
     }}
   ],
-  "market_summary": "1-2 sentences"
+  "market_summary": "2-3 sentences summarizing the prediction market landscape across all categories scanned"
 }}
 
-Only include markets where recommendation is NOT "SKIP". Max 5 recommendations."""
+Rules:
+- Only include markets where you recommend a trade (BUY YES or BUY NO), not SKIP
+- Max 5 trade recommendations
+- Always tag the category: crypto, economics, finance, geopolitics, sports, weather, culture, tech
+- The reasoning MUST cite specific data points, not generic statements"""
 
 
 class KalshiPipeline:
