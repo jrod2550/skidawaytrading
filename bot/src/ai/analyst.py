@@ -196,17 +196,38 @@ class ClaudeAnalyst:
         import re
 
         try:
-            resp = await self._client.post(
-                "/v1/messages",
-                json={
-                    "model": model,
-                    "max_tokens": max_tokens,
-                    "system": SYSTEM_PROMPT,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
+            # Try requested model, then fallbacks
+            FALLBACKS = {
+                HAIKU: [HAIKU, "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
+                SONNET: [SONNET, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022"],
+            }
+            models_to_try = FALLBACKS.get(model, [model, "claude-3-haiku-20240307"])
+            data = None
+
+            for try_model in models_to_try:
+                try:
+                    resp = await self._client.post(
+                        "/v1/messages",
+                        json={
+                            "model": try_model,
+                            "max_tokens": max_tokens,
+                            "system": SYSTEM_PROMPT,
+                            "messages": [{"role": "user", "content": prompt}],
+                        },
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    if try_model != model:
+                        logger.info("Using fallback model %s (requested %s)", try_model, model)
+                    break
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 404 and try_model != models_to_try[-1]:
+                        logger.warning("Model %s not found, trying fallback...", try_model)
+                        continue
+                    raise
+
+            if not data:
+                return {"error": "No Claude model available", "confidence_score": 0}
 
             # Track token usage
             usage = data.get("usage", {})

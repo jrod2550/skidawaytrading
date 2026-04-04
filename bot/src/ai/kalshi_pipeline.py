@@ -206,19 +206,34 @@ class KalshiPipeline:
         )
 
         try:
-            # Use the analyst's _call method directly with Kalshi system prompt
-            import re
-            resp = await self.analyst._client.post(
-                "/v1/messages",
-                json={
-                    "model": SONNET,
-                    "max_tokens": 2048,
-                    "system": KALSHI_SYSTEM_PROMPT,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
+            # Try multiple models with fallback
+            MODELS = [SONNET, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"]
+            data = None
+
+            for model in MODELS:
+                try:
+                    resp = await self.analyst._client.post(
+                        "/v1/messages",
+                        json={
+                            "model": model,
+                            "max_tokens": 2048,
+                            "system": KALSHI_SYSTEM_PROMPT,
+                            "messages": [{"role": "user", "content": prompt}],
+                        },
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                    logger.info("Kalshi analysis using model: %s", model)
+                    break
+                except Exception as model_err:
+                    if "not_found" in str(model_err).lower() or "404" in str(model_err):
+                        logger.warning("Model %s not available, trying next...", model)
+                        continue
+                    raise
+
+            if not data:
+                raise ValueError("No Claude model available")
+
             text = data["content"][0]["text"]
 
             # Extract JSON
