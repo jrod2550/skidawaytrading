@@ -209,9 +209,9 @@ class KalshiPipeline:
                 "category": m.get("category", ""),
             })
 
-        # Limit to 30 most interesting (by volume) to keep prompt manageable
+        # Limit to 15 most interesting (by volume) to keep prompt under Claude timeout
         formatted.sort(key=lambda x: int(x.get("volume") or 0), reverse=True)
-        top_markets = formatted[:30]
+        top_markets = formatted[:15]
 
         logger.info("Scanning %d Kalshi markets (%d by volume)", len(markets), len(top_markets))
 

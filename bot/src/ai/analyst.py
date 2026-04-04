@@ -186,7 +186,7 @@ class ClaudeAnalyst:
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
             },
-            timeout=30.0,
+            timeout=90.0,
         )
         # Running token/cost totals for this session
         self.session_tokens = {"input": 0, "output": 0}
