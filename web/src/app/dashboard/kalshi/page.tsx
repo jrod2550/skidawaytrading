@@ -119,7 +119,7 @@ export default function KalshiPage() {
             <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
               Mode
             </p>
-            <p className="text-sm font-bold font-mono text-profit">DEMO</p>
+            <p className="text-sm font-bold font-mono text-gold">LIVE</p>
           </CardContent>
         </Card>
       </div>
