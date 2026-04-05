@@ -188,6 +188,15 @@ class KalshiPipeline:
         """
         logger.info("Running Kalshi market scan...")
 
+        # Check if bot is paused
+        try:
+            paused_result = self.db.table("bot_config").select("value").eq("key", "bot_paused").execute()
+            if paused_result.data and paused_result.data[0].get("value"):
+                logger.info("Kalshi scan skipped — bot is PAUSED")
+                return 0
+        except Exception:
+            pass
+
         try:
             markets = await self.kalshi.get_markets(status="open", limit=1000)
         except Exception as e:

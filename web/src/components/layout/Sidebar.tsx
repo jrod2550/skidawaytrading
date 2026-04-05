@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile, BotHeartbeat } from "@/lib/types/trading";
@@ -35,6 +36,8 @@ interface SidebarProps {
 export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [paused, setPaused] = useState(false);
+  const [pauseLoading, setPauseLoading] = useState(false);
 
   const isAdmin = profile?.role === "admin";
   const items = isAdmin ? [...navItems, ...adminItems] : navItems;
@@ -52,6 +55,37 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
       : botStatus === "degraded"
         ? "Degraded"
         : "Offline";
+
+  // Load pause state on mount
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("bot_config")
+      .select("value")
+      .eq("key", "bot_paused")
+      .single()
+      .then(({ data }) => {
+        if (data) setPaused(Boolean(data.value));
+      });
+  }, []);
+
+  async function handleTogglePause() {
+    setPauseLoading(true);
+    const supabase = createClient();
+    const newState = !paused;
+    const { data: existing } = await supabase
+      .from("bot_config")
+      .select("key")
+      .eq("key", "bot_paused")
+      .single();
+    if (existing) {
+      await supabase.from("bot_config").update({ value: newState }).eq("key", "bot_paused");
+    } else {
+      await supabase.from("bot_config").insert({ key: "bot_paused", value: newState });
+    }
+    setPaused(newState);
+    setPauseLoading(false);
+  }
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -92,6 +126,34 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
           </span>
         </div>
       </div>
+
+      {/* Pause all trading button */}
+      {isAdmin && (
+        <div className="mx-4 mb-3">
+          <button
+            onClick={handleTogglePause}
+            disabled={pauseLoading}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[10px] font-semibold tracking-wide uppercase transition-all",
+              paused
+                ? "bg-loss/10 border border-loss/30 text-loss hover:bg-loss/20"
+                : "bg-muted border border-border text-muted-foreground hover:border-loss/30 hover:text-loss"
+            )}
+          >
+            {paused ? (
+              <>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Resume Trading
+              </>
+            ) : (
+              <>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                Pause All Trading
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 px-3 space-y-0.5">
