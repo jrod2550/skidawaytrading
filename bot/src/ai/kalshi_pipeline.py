@@ -58,8 +58,12 @@ GEOPOLITICS:
 - Congressional trading patterns may signal policy knowledge.
 
 WEATHER & CLIMATE:
-- Temperature records, hurricane paths, seasonal patterns.
-- Energy sector flow (XLE, XOP) may signal weather-related positioning.
+- You receive REAL-TIME weather data: current temps, 7-day forecasts, global temperature trends from Open-Meteo API.
+- Global warming markets: compare current temps to historical averages. Trending above normal = "warming exceeds X" underpriced.
+- Hurricane markets: check Caribbean sea temps and wind patterns in the weather data.
+- Temperature records: use forecast data to estimate probability of extreme heat/cold events.
+- EV adoption: cross-reference with energy policy and oil prices.
+- EDGE: Most Kalshi weather traders use gut feel. You have actual forecast data. Use it.
 
 SPORTS:
 - Game outcomes, player props, championship futures.
@@ -84,13 +88,16 @@ Always respond in valid JSON."""
 
 KALSHI_ANALYSIS_PROMPT = """Analyze these Kalshi prediction markets across ALL categories.
 
-AVAILABLE MARKETS ({market_count} total):
+AVAILABLE MARKETS ({market_count} total, from {categories_found} categories):
 {markets_data}
 
-UNUSUAL WHALES INTELLIGENCE:
+UNUSUAL WHALES INTELLIGENCE (for finance/economics markets):
 Market Tide (overall bullish/bearish): {market_tide}
 Top Institutional Options Flow: {top_flow}
 Upcoming Economic Events: {econ_calendar}
+
+REAL-TIME WEATHER DATA (for weather/climate markets):
+{weather_data}
 
 IBKR SIGNAL INTELLIGENCE (recent signals from our options bot):
 {ibkr_signals}
@@ -224,9 +231,43 @@ class KalshiPipeline:
                 "category": m.get("category", ""),
             })
 
-        # Limit to 15 most interesting (by volume) to keep prompt under Claude timeout
-        formatted.sort(key=lambda x: int(x.get("volume") or 0), reverse=True)
-        top_markets = formatted[:15]
+        # Diversify market selection — don't just pick by volume
+        # Group by category and pick top from each to ensure diversity
+        by_category: dict[str, list] = {}
+        for m in formatted:
+            cat = str(m.get("category") or m.get("title", "")[:20]).lower()
+            # Classify by keywords
+            title_lower = str(m.get("title", "")).lower() + str(m.get("subtitle", "")).lower()
+            if any(x in title_lower for x in ["weather", "climate", "temperature", "warming", "earthquake", "hurricane"]):
+                cat = "weather"
+            elif any(x in title_lower for x in ["bitcoin", "btc", "eth", "crypto"]):
+                cat = "crypto"
+            elif any(x in title_lower for x in ["cpi", "fed", "inflation", "gdp", "jobs", "unemployment", "rate"]):
+                cat = "economics"
+            elif any(x in title_lower for x in ["nba", "nfl", "mlb", "nhl", "soccer", "sport", "game", "player"]):
+                cat = "sports"
+            elif any(x in title_lower for x in ["election", "president", "congress", "senate", "governor", "vote"]):
+                cat = "politics"
+            elif any(x in title_lower for x in ["pope", "oscar", "culture", "movie", "music"]):
+                cat = "culture"
+            elif any(x in title_lower for x in ["ipo", "company", "stock", "market", "s&p", "spy", "vix"]):
+                cat = "finance"
+            else:
+                cat = "other"
+            m["_category"] = cat
+            by_category.setdefault(cat, []).append(m)
+
+        # Pick up to 3 from each category, prioritizing those with actual pricing
+        top_markets = []
+        for cat, markets_in_cat in by_category.items():
+            # Prefer markets with actual bid/ask data
+            with_pricing = [m for m in markets_in_cat if m.get("yes_bid") or m.get("yes_ask")]
+            without_pricing = [m for m in markets_in_cat if not m.get("yes_bid") and not m.get("yes_ask")]
+            selected = with_pricing[:3] + without_pricing[:1]  # 3 with pricing, 1 without
+            top_markets.extend(selected[:3])
+
+        # Cap at 18 total
+        top_markets = top_markets[:18]
 
         logger.info("Scanning %d Kalshi markets (%d by volume)", len(markets), len(top_markets))
 
@@ -239,14 +280,13 @@ class KalshiPipeline:
             },
         )
 
-        # Gather intelligence
+        # Gather intelligence from multiple sources
         import asyncio
         from src.market_data.unusual_whales import UnusualWhalesClient
+        from src.market_data.weather import WeatherClient
 
         uw = UnusualWhalesClient()
-        market_tide = {}
-        top_flow = []
-        econ_calendar = []
+        weather = WeatherClient()
 
         async def fetch_tide():
             try:
@@ -268,22 +308,35 @@ class KalshiPipeline:
             except Exception:
                 return []
 
-        results = await asyncio.gather(fetch_tide(), fetch_flow(), fetch_econ())
+        async def fetch_weather():
+            try:
+                return await weather.get_weather_summary()
+            except Exception:
+                return {}
+
+        results = await asyncio.gather(fetch_tide(), fetch_flow(), fetch_econ(), fetch_weather())
         market_tide = results[0]
         top_flow = results[1]
         econ_calendar = results[2]
+        weather_data = results[3]
         await uw.close()
+        await weather.close()
 
         # Get IBKR signals for cross-reference
         ibkr_signals = self._get_ibkr_signals()
 
+        # Summarize categories found
+        cats_found = list(set(m.get("_category", "other") for m in top_markets))
+
         # Claude analyzes ALL markets
         prompt = KALSHI_ANALYSIS_PROMPT.format(
             market_count=len(top_markets),
+            categories_found=", ".join(cats_found),
             markets_data=json.dumps(top_markets, indent=2),
             market_tide=json.dumps(market_tide, indent=2),
             top_flow=json.dumps(top_flow, indent=2),
             econ_calendar=json.dumps(econ_calendar, indent=2),
+            weather_data=json.dumps(weather_data, indent=2) if weather_data else "No weather data available.",
             ibkr_signals=json.dumps(ibkr_signals, indent=2) if ibkr_signals else "No IBKR signals today yet.",
         )
 
