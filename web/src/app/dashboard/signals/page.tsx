@@ -157,6 +157,51 @@ export default function SignalsPage() {
       .eq("id", id);
   }
 
+  const [testTradeLoading, setTestTradeLoading] = useState(false);
+
+  async function fireTestTrade() {
+    setTestTradeLoading(true);
+    try {
+      // Insert a pre-approved signal for AAPL equity — the bot picks this up every 10 seconds
+      await supabase.from("signals").insert({
+        source: "flow",
+        status: "approved",
+        ticker: "AAPL",
+        direction: "bullish",
+        confidence_score: 85,
+        source_data: {
+          flow_alert: { ticker: "AAPL", underlying_price: 220 },
+          ai_analysis: {
+            confidence_score: 85,
+            direction: "bullish",
+            thesis: "TEST TRADE — paper account validation. Buy 5 shares AAPL at market.",
+            recommended_trade: {
+              instrument: "equity",
+              action: "BUY STOCK",
+              position_size_pct: 1.0,
+            },
+            reasoning: "Manual test trade to validate IBKR paper execution pipeline.",
+          },
+        },
+        scoring_factors: {
+          thesis: "TEST: IBKR paper trade validation",
+          sonnet_confidence: 85,
+        },
+        suggested_action: "BUY STOCK",
+        suggested_quantity: 5,
+      }).execute();
+
+      // Also update bot_mode to semi_auto if it's still manual_review
+      await supabase.from("bot_config").upsert({
+        key: "bot_mode",
+        value: "semi_auto",
+      }).execute();
+    } catch (e) {
+      console.error("Failed to create test trade:", e);
+    }
+    setTestTradeLoading(false);
+  }
+
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -203,7 +248,28 @@ export default function SignalsPage() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Test Trade + Filters */}
+      {isAdmin && (
+        <Card className="bg-card border-border border-teal/20">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">IBKR Paper Test</p>
+              <p className="text-xs text-muted-foreground">
+                Fire a test trade (BUY 5x AAPL at market) to validate the execution pipeline
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="bg-teal text-teal-foreground hover:bg-teal/90 h-9 px-4"
+              onClick={fireTestTrade}
+              disabled={testTradeLoading}
+            >
+              {testTradeLoading ? "Sending..." : "Fire Test Trade"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex gap-2 flex-wrap">
         {[
           { key: "all", label: "All" },
