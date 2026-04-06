@@ -230,6 +230,7 @@ export default function DashboardOverview() {
   const [kalshiBalance, setKalshiBalance] = useState<{ balance_dollars: number; portfolio_value_dollars: number } | null>(null);
   const [kalshiPnl, setKalshiPnl] = useState(0);
   const [kalshiWinRate, setKalshiWinRate] = useState(0);
+  const [kalshiPositions, setKalshiPositions] = useState<{ ticker: string; side: string; position: number; exposure_dollars: number }[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -293,6 +294,7 @@ export default function DashboardOverview() {
         });
         setKalshiPnl((kd.total_pnl as number) ?? 0);
         setKalshiWinRate((kd.win_rate as number) ?? 0);
+        setKalshiPositions((kd.positions as { ticker: string; side: string; position: number; exposure_dollars: number }[]) ?? []);
       }
     }
 
@@ -479,8 +481,11 @@ export default function DashboardOverview() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase">Balance</p>
-                <p className="text-lg font-mono font-bold">{kalshiBalance ? `$${kalshiBalance.balance_dollars.toFixed(2)}` : "—"}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Total Value</p>
+                <p className="text-lg font-mono font-bold">{kalshiBalance ? `$${(kalshiBalance.balance_dollars + kalshiBalance.portfolio_value_dollars).toFixed(2)}` : "—"}</p>
+                {kalshiBalance && kalshiBalance.portfolio_value_dollars > 0 && (
+                  <p className="text-[9px] text-muted-foreground font-mono">${kalshiBalance.balance_dollars.toFixed(2)} cash + ${kalshiBalance.portfolio_value_dollars.toFixed(2)} open</p>
+                )}
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase">Net P&L</p>
@@ -509,7 +514,7 @@ export default function DashboardOverview() {
                 Positions
               </h3>
               <span className="text-[10px] font-mono text-muted-foreground">
-                {positions.length} open
+                {positions.length + kalshiPositions.length} open
               </span>
             </div>
 
@@ -528,6 +533,34 @@ export default function DashboardOverview() {
               </div>
             ) : (
               <div className="space-y-2">
+                {/* Kalshi positions */}
+                {kalshiPositions.map((kp, i) => {
+                  // Human-readable ticker: KXBTC15M-26APR061330-30 -> "BTC 1:30 PM"
+                  const t = kp.ticker;
+                  const btcMatch = t.match(/KXBTC15M-\d+[A-Z]+(\d{2})(\d{2})/);
+                  const label = btcMatch ? `BTC ${btcMatch[1]}:${btcMatch[2]}` : t.length > 25 ? t.substring(0, 25) + "..." : t;
+                  const isBtc = t.includes("BTC");
+                  return (
+                    <div key={`k-${i}`} className="group flex items-center justify-between rounded-lg bg-[oklch(0.97_0.003_90)] border border-[oklch(0.65_0.16_85_/_0.2)] px-3 py-2.5">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-md flex items-center justify-center text-[10px] font-mono font-bold bg-[oklch(0.65_0.16_85_/_0.08)] text-gold border border-[oklch(0.65_0.16_85_/_0.2)]">
+                          K
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold tracking-tight">{label}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            {kp.side} x{kp.position} · {isBtc ? "15-min prediction" : "prediction"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <p className="text-sm font-mono font-medium">${kp.exposure_dollars.toFixed(2)}</p>
+                        <p className="text-[11px] font-mono text-gold">{kp.side}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* IBKR positions */}
                 {positions.slice(0, 6).map((pos) => (
                   <div
                     key={pos.id}
