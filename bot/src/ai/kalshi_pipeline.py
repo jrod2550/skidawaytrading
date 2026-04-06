@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Broad categories — we want EVERYTHING
 SCAN_ALL = True  # Scan all markets, let the AI decide what's interesting
 
-KALSHI_SYSTEM_PROMPT = """You are a quantitative prediction market analyst at Skidaway Trading.
+KALSHI_SYSTEM_PROMPT = """You are a quantitative prediction market analyst at Booyah Trading.
 You trade binary outcome contracts on Kalshi — YES pays $1, NO pays $0. Price = implied probability.
 
 YOU HAVE TWO UNIQUE EDGES:

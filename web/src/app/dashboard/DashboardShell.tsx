@@ -56,7 +56,7 @@ export default function DashboardShell({
             </svg>
           </button>
           <Image src="/logo.webp" alt="Skidaway" width={24} height={24} className="rounded" />
-          <span className="text-sm font-semibold tracking-tight">Skidaway Trading</span>
+          <span className="text-sm font-semibold tracking-tight">Booyah Trading</span>
         </div>
 
         <div className="p-4 lg:p-8">{children}</div>

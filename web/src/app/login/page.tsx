@@ -74,7 +74,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 mb-6 rounded-2xl glow-teal">
             <Image
               src="/logo.webp"
-              alt="Skidaway Trading"
+              alt="Booyah Trading"
               width={80}
               height={80}
               className="rounded-2xl"
@@ -82,7 +82,7 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-foreground">
-            Skidaway Trading
+            Booyah Trading
           </h1>
           <div className="mt-1.5 flex items-center justify-center gap-2">
             <div className="h-px w-8 bg-gradient-to-r from-transparent to-[oklch(0.55_0.18_175_/_0.3)]" />

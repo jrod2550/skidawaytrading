@@ -13,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Skidaway Trading",
+  title: "Booyah Trading",
   description: "Multi-signal trading bot — congressional trades, options flow, and prediction markets",
 };
 

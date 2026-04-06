@@ -1,4 +1,4 @@
-"""Claude AI Signal Analyst — the brain of Skidaway Trading.
+"""Claude AI Signal Analyst — the brain of Booyah Trading.
 
 Uses a tiered approach:
   - Haiku: Fast screening of every flow alert (~$0.001 per call)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 HAIKU = "claude-haiku-4-5-20251001"
 SONNET = "claude-sonnet-4-6"
 
-SYSTEM_PROMPT = """You are a senior quantitative options flow analyst at Skidaway Trading, an institutional-style options fund.
+SYSTEM_PROMPT = """You are a senior quantitative options flow analyst at Booyah Trading, an institutional-style options fund.
 
 ANALYTICAL FRAMEWORK:
 1. FLOW CLASSIFICATION — Distinguish institutional from retail. Key signals:

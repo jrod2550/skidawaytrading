@@ -55,7 +55,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Skidaway Trading — Light Coastal Theme */
+/* Booyah Trading — Light Coastal Theme */
 :root {
   --background: oklch(0.97 0.003 90);
   --foreground: oklch(0.20 0.015 250);

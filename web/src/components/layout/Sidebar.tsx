@@ -101,14 +101,14 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
         <div className="flex items-center gap-2.5">
           <Image
             src="/logo.webp"
-            alt="Skidaway Trading"
+            alt="Booyah Trading"
             width={36}
             height={36}
             className="rounded-lg"
           />
           <div>
             <p className="text-[13px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
-              Skidaway
+              Booyah
             </p>
             <p className="text-[9px] font-medium tracking-[0.15em] uppercase text-[oklch(0.60_0.01_250)]">
               Trading
