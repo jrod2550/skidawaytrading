@@ -109,6 +109,21 @@ async def main() -> None:
             misfire_grace_time=60,
         )
 
+    # ── BTC 15-min Agent — every 2 minutes (catches every window) ──
+    btc_agent = None
+    if settings.kalshi_api_key:
+        from src.ai.btc_agent import BTCAgent
+        btc_agent = BTCAgent(kalshi, analyst._client)
+        scheduler.add_job(
+            btc_agent.run,
+            "interval",
+            minutes=2,
+            id="btc_15min_agent",
+            max_instances=1,
+            misfire_grace_time=30,
+        )
+        logger.info("BTC 15-min Agent enabled — $5/bet every window")
+
     # ── Expire old signals — every 15 minutes ──
     scheduler.add_job(
         signal_engine.expire_old_signals,
