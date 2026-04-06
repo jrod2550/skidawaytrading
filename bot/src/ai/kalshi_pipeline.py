@@ -205,7 +205,20 @@ class KalshiPipeline:
             pass
 
         try:
-            markets = await self.kalshi.get_markets(status="open", limit=1000)
+            # Fetch multiple pages to get all markets
+            all_markets: list[dict] = []
+            cursor = None
+            for page in range(3):  # Up to 3000 markets
+                params: dict = {"status": "open", "limit": 1000}
+                if cursor:
+                    params["cursor"] = cursor
+                data = await self.kalshi._get("/markets", params=params)
+                page_markets = data.get("markets", [])
+                all_markets.extend(page_markets)
+                cursor = data.get("cursor")
+                if not cursor or len(page_markets) == 0:
+                    break
+            markets = all_markets
         except Exception as e:
             logger.error("Failed to fetch Kalshi markets: %s", e)
             return 0
@@ -214,21 +227,27 @@ class KalshiPipeline:
             logger.info("No open Kalshi markets found")
             return 0
 
-        # Format markets for analysis — take a representative sample
+        # Format markets — map dollar fields to cents for consistency
         formatted = []
         for m in markets:
+            yes_bid_d = float(m.get("yes_bid_dollars") or m.get("yes_bid") or 0)
+            yes_ask_d = float(m.get("yes_ask_dollars") or m.get("yes_ask") or 0)
+            no_bid_d = float(m.get("no_bid_dollars") or m.get("no_bid") or 0)
+            no_ask_d = float(m.get("no_ask_dollars") or m.get("no_ask") or 0)
+            vol = float(m.get("volume_fp") or m.get("volume") or 0)
             formatted.append({
                 "ticker": m.get("ticker"),
                 "title": m.get("title"),
-                "subtitle": m.get("subtitle", ""),
-                "yes_bid": m.get("yes_bid"),
-                "no_bid": m.get("no_bid"),
-                "yes_ask": m.get("yes_ask"),
-                "no_ask": m.get("no_ask"),
-                "volume": m.get("volume"),
-                "open_interest": m.get("open_interest"),
+                "subtitle": m.get("subtitle") or m.get("yes_sub_title", ""),
+                "yes_bid_cents": round(yes_bid_d * 100),
+                "yes_ask_cents": round(yes_ask_d * 100),
+                "no_bid_cents": round(no_bid_d * 100),
+                "no_ask_cents": round(no_ask_d * 100),
+                "volume": vol,
+                "open_interest": float(m.get("open_interest_fp") or m.get("open_interest") or 0),
                 "close_time": m.get("close_time"),
                 "category": m.get("category", ""),
+                "has_pricing": yes_bid_d > 0 or yes_ask_d > 0,
             })
 
         # Diversify market selection — don't just pick by volume
@@ -257,18 +276,19 @@ class KalshiPipeline:
             m["_category"] = cat
             by_category.setdefault(cat, []).append(m)
 
-        # Pick from each category — include markets with AND without pricing
-        # The AI can still analyze probability even without live bids
+        # Prioritize markets WITH pricing — those are actually tradeable
         top_markets = []
         for cat, markets_in_cat in by_category.items():
-            with_pricing = [m for m in markets_in_cat if m.get("yes_bid") or m.get("yes_ask")]
-            without_pricing = [m for m in markets_in_cat if not m.get("yes_bid") and not m.get("yes_ask")]
-            # Take 2 with pricing + 2 without from each category
-            selected = with_pricing[:2] + without_pricing[:2]
+            with_pricing = [m for m in markets_in_cat if m.get("has_pricing")]
+            without_pricing = [m for m in markets_in_cat if not m.get("has_pricing")]
+            # Take up to 3 with pricing, 1 without from each category
+            selected = with_pricing[:3] + without_pricing[:1]
             top_markets.extend(selected)
 
-        # Cap at 20 total
-        top_markets = top_markets[:20]
+        # Cap at 20 total, prioritize priced markets
+        priced = [m for m in top_markets if m.get("has_pricing")]
+        unpriced = [m for m in top_markets if not m.get("has_pricing")]
+        top_markets = (priced + unpriced)[:20]
 
         logger.info("Scanning %d Kalshi markets (%d by volume)", len(markets), len(top_markets))
 
