@@ -358,7 +358,7 @@ export default function KalshiPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold">
-                          {event.ticker?.replace("KALSHI:", "") ?? "Kalshi"}
+                          {typeof details.market_title === "string" ? details.market_title : (event.ticker?.replace("KALSHI:", "") ?? "Kalshi")}
                         </span>
                         <Badge variant="outline" className={`text-[9px] ${
                           isTrade ? "border-teal text-teal" :
@@ -401,6 +401,11 @@ export default function KalshiPage() {
                       {details.price_cents != null && (
                         <span className="text-sm font-mono text-gold">
                           {String(details.price_cents ?? "")}¢
+                        </span>
+                      )}
+                      {typeof details.total_cost === "string" && (
+                        <span className="text-sm font-mono font-semibold">
+                          {details.total_cost}
                         </span>
                       )}
                       <span className="text-[10px] text-muted-foreground">

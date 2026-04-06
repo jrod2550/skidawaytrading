@@ -456,6 +456,8 @@ class KalshiPipeline:
             edge = rec.get("edge_pct", 0)
             confidence = rec.get("confidence", 0)
 
+            market_title = rec.get("title", ticker)
+
             # Log EVERY recommendation (even SKIPs) so user can see what AI is thinking
             if recommendation != "SKIP":
                 self._log_activity(
@@ -463,6 +465,7 @@ class KalshiPipeline:
                     ticker=ticker,
                     details={
                         "platform": "kalshi",
+                        "market_title": market_title,
                         "recommendation": recommendation,
                         "edge_pct": edge,
                         "estimated_prob": rec.get("your_estimated_probability"),
@@ -488,13 +491,14 @@ class KalshiPipeline:
 
             side = "yes" if "YES" in recommendation.upper() else "no"
 
-            # Category-based position limits
-            max_contracts = 10
-            if category in ("sports", "culture"):
-                max_contracts = 5
+            # Minimum $2 per bet
+            price = rec.get("market_price_yes_cents") if side == "yes" else (100 - (rec.get("market_price_yes_cents") or 50))
+            price = price or 50  # default 50¢ if unknown
+            min_contracts = max(1, int(200 / price))  # at least $2 worth
 
-            contracts = min(rec.get("contracts", 1), max_contracts)
-            price = rec.get("market_price_yes_cents") if side == "yes" else (100 - (rec.get("market_price_yes_cents", 50)))
+            # Position limits
+            max_contracts = 15
+            contracts = max(min_contracts, min(rec.get("contracts", 3), max_contracts))
 
             try:
                 order = await self.kalshi.place_order(
@@ -510,9 +514,11 @@ class KalshiPipeline:
                     ticker=ticker,
                     details={
                         "platform": "kalshi",
+                        "market_title": market_title,
                         "side": side,
                         "contracts": contracts,
                         "price_cents": price,
+                        "total_cost": f"${(contracts * price / 100):.2f}",
                         "edge_pct": rec.get("edge_pct"),
                         "estimated_prob": rec.get("your_estimated_probability"),
                         "category": category,
