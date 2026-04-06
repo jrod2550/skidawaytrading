@@ -12,7 +12,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from src.ai.analyst import SONNET
+from src.ai.analyst import HAIKU, SONNET
 from src.broker.kalshi import KalshiClient
 from src.db.supabase_client import get_supabase
 from src.market_data.crypto import CryptoClient
@@ -162,7 +162,7 @@ class BTCAgent:
         )
 
         try:
-            MODELS = [SONNET, "claude-sonnet-4-5-20250929", "claude-3-haiku-20240307"]
+            MODELS = [HAIKU, SONNET, "claude-3-haiku-20240307"]
             resp_data = None
 
             for model in MODELS:

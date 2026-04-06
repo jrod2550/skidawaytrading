@@ -185,7 +185,7 @@ class AIPipeline:
             signal_status = "pending"
             if bot_mode == "full_auto":
                 signal_status = "approved"
-            elif bot_mode == "semi_auto" and confidence >= 85:
+            elif bot_mode == "semi_auto" and confidence >= 70:
                 signal_status = "approved"
 
             signal_data = {
@@ -327,9 +327,21 @@ class AIPipeline:
 
             rec = analysis.get("recommended_trade", {})
 
+            # Auto-approve congressional signals in semi_auto/full_auto
+            try:
+                config_row = self.db.table("bot_config").select("value").eq("key", "bot_mode").execute()
+                cong_mode = str(config_row.data[0].get("value", "manual_review")).strip('"') if config_row.data else "manual_review"
+            except Exception:
+                cong_mode = "manual_review"
+            cong_status = "pending"
+            if cong_mode == "full_auto":
+                cong_status = "approved"
+            elif cong_mode == "semi_auto" and confidence >= 70:
+                cong_status = "approved"
+
             signal_data = {
                 "source": "congressional",
-                "status": "pending",
+                "status": cong_status,
                 "ticker": ticker,
                 "direction": direction,
                 "confidence_score": confidence,

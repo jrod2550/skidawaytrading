@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
 
     # Bot
-    bot_mode: str = "manual_review"  # manual_review | semi_auto | full_auto
+    bot_mode: str = "semi_auto"  # manual_review | semi_auto | full_auto
     poll_interval_seconds: int = 60
     congressional_poll_minutes: int = 30
     log_level: str = "INFO"
