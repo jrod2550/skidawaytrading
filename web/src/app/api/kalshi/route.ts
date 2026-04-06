@@ -71,12 +71,80 @@ export async function GET(request: Request) {
     }
 
     if (action === "positions") {
-      const data = await kalshiFetch("/portfolio/positions?limit=50");
-      const fills = await kalshiFetch("/portfolio/fills?limit=50");
+      const [posData, fillsData, settlementsData, ordersData] = await Promise.all([
+        kalshiFetch("/portfolio/positions?limit=100"),
+        kalshiFetch("/portfolio/fills?limit=100"),
+        kalshiFetch("/portfolio/settlements?limit=100"),
+        kalshiFetch("/portfolio/orders?status=resting"),
+      ]);
+
+      // Active positions (non-zero)
+      const positions = (posData?.market_positions ?? []).filter(
+        (p: Record<string, unknown>) => parseFloat(String(p.position_fp ?? "0")) !== 0
+      );
+
+      // Get market titles for positions
+      const enriched = [];
+      for (const pos of positions) {
+        let title = pos.ticker;
+        try {
+          const mkt = await kalshiFetch(`/markets/${pos.ticker}`);
+          if (mkt?.market) {
+            title = mkt.market.title || mkt.market.yes_sub_title || pos.ticker;
+          }
+        } catch { /* */ }
+        enriched.push({
+          ...pos,
+          market_title: title,
+          exposure_dollars: parseFloat(String(pos.market_exposure_dollars ?? "0")),
+          pnl_dollars: parseFloat(String(pos.realized_pnl_dollars ?? "0")),
+          position: parseFloat(String(pos.position_fp ?? "0")),
+          side: parseFloat(String(pos.position_fp ?? "0")) > 0 ? "YES" : "NO",
+        });
+      }
+
+      // Trade history (fills)
+      const fills = (fillsData?.fills ?? []).map((f: Record<string, unknown>) => ({
+        fill_id: f.fill_id,
+        ticker: f.ticker ?? f.market_ticker,
+        side: f.side,
+        action: f.action,
+        count: parseFloat(String(f.count_fp ?? "0")),
+        yes_price_cents: Math.round(parseFloat(String(f.yes_price_dollars ?? "0")) * 100),
+        no_price_cents: Math.round(parseFloat(String(f.no_price_dollars ?? "0")) * 100),
+        fee: parseFloat(String(f.fee_cost ?? "0")),
+        created_at: f.created_time,
+        is_taker: f.is_taker,
+      }));
+
+      // Settlements (won/lost)
+      const settlements = (settlementsData?.settlements ?? []).map((s: Record<string, unknown>) => ({
+        ticker: s.ticker ?? s.market_ticker,
+        settled_at: s.settled_time,
+        revenue: parseFloat(String(s.revenue ?? "0")),
+        pnl: parseFloat(String(s.settlement_pnl ?? s.revenue ?? "0")),
+        yes_price: s.yes_price,
+        no_price: s.no_price,
+        result: parseFloat(String(s.revenue ?? "0")) > 0 ? "WON" : "LOST",
+      }));
+
+      // Resting orders
+      const resting = (ordersData?.orders ?? []).map((o: Record<string, unknown>) => ({
+        order_id: o.order_id,
+        ticker: o.ticker,
+        side: o.side,
+        action: o.action,
+        price: o.yes_price ?? o.no_price,
+        remaining: o.remaining_count,
+        created_at: o.created_time,
+      }));
+
       return NextResponse.json({
-        positions: data?.market_positions ?? [],
-        event_positions: data?.event_positions ?? [],
-        fills: fills?.fills ?? [],
+        positions: enriched,
+        fills,
+        settlements,
+        resting_orders: resting,
+        total_pnl: settlements.reduce((s: number, x: { pnl: number }) => s + x.pnl, 0),
       });
     }
 
