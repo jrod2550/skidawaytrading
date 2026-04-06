@@ -154,12 +154,12 @@ export default function PositionsPage() {
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-muted-foreground">
-              Kalshi Balance
+              Kalshi Total
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-lg font-bold font-mono text-gold">
-              {kalshiBalance ? fmtCurrency(kalshiBalance.balance_dollars) : "--"}
+              {kalshiBalance ? fmtCurrency(kalshiBalance.balance_dollars + kalshiBalance.portfolio_value_dollars) : "--"}
             </p>
           </CardContent>
         </Card>

@@ -216,7 +216,7 @@ class BTCAgent:
         if price_cents <= 0:
             price_cents = 50
 
-        contracts = max(1, round(1000 / price_cents))  # $10 worth
+        contracts = max(1, round(2000 / price_cents))  # $20 worth
 
         bet_desc = f"BTC 15-min: {direction} — {'YES' if side == 'yes' else 'NO'} {contracts}x @ {price_cents}¢ = ${contracts * price_cents / 100:.2f}"
 
