@@ -302,6 +302,13 @@ class KalshiPipeline:
         for cat, cat_markets in liquid_by_cat.items():
             top_markets.extend(cat_markets[:4])
 
+        # Always include BTC markets regardless of volume
+        btc_markets = [m for m in formatted if "btc" in str(m.get("ticker", "")).lower() or "bitcoin" in str(m.get("title", "")).lower()]
+        for bm in btc_markets[:5]:
+            if bm not in top_markets:
+                bm["_category"] = "crypto"
+                top_markets.append(bm)
+
         # Cap at 25, sorted by volume
         top_markets.sort(key=lambda x: x.get("volume", 0), reverse=True)
         top_markets = top_markets[:25]
