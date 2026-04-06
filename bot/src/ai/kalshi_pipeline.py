@@ -232,17 +232,8 @@ class KalshiPipeline:
                     break
             markets = all_markets
 
-            # Always fetch BTC 15-min markets separately (different series)
-            try:
-                btc15_data = await self.kalshi._get("/markets", params={"series_ticker": "KXBTC15M", "status": "open", "limit": 10})
-                btc15 = btc15_data.get("markets", [])
-                if btc15:
-                    markets.extend(btc15)
-                    logger.info("Found %d BTC 15-min markets", len(btc15))
-            except Exception:
-                pass
-
-            # Also fetch BTC daily range
+            # Skip BTC 15-min markets — dedicated BTC agent handles those
+            # Fetch BTC daily range only
             try:
                 btc_data = await self.kalshi._get("/markets", params={"series_ticker": "KXBTC", "status": "open", "limit": 10})
                 btc_daily = btc_data.get("markets", [])
@@ -322,8 +313,9 @@ class KalshiPipeline:
         for cat, cat_markets in liquid_by_cat.items():
             top_markets.extend(cat_markets[:4])
 
-        # Always include BTC 15-min and daily markets regardless of volume
-        btc_markets = [m for m in formatted if any(x in str(m.get("ticker", "")).lower() for x in ["btc", "kxbtc15m", "kxbtc"]) or "bitcoin" in str(m.get("title", "")).lower()]
+        # Include BTC daily markets but SKIP BTC 15-min (dedicated BTC agent handles those)
+        btc_markets = [m for m in formatted if any(x in str(m.get("ticker", "")).lower() for x in ["kxbtc"]) or "bitcoin" in str(m.get("title", "")).lower()]
+        btc_markets = [m for m in btc_markets if "kxbtc15m" not in str(m.get("ticker", "")).lower()]
         for bm in btc_markets[:5]:
             if bm not in top_markets:
                 bm["_category"] = "crypto"
