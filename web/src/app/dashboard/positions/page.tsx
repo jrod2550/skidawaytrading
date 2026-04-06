@@ -46,6 +46,8 @@ export default function PositionsPage() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [kalshiPositions, setKalshiPositions] = useState<KalshiPosition[]>([]);
   const [kalshiBalance, setKalshiBalance] = useState<KalshiBalance | null>(null);
+  const [kalshiPnl, setKalshiPnl] = useState(0);
+  const [kalshiWinRate, setKalshiWinRate] = useState(0);
   const [kalshiLoading, setKalshiLoading] = useState(true);
 
   useEffect(() => {
@@ -90,6 +92,8 @@ export default function PositionsPage() {
             portfolio_value_dollars: (kd.portfolio_value_dollars as number) ?? 0,
           });
           setKalshiPositions((kd.positions as KalshiPosition[]) ?? []);
+          setKalshiPnl((kd.total_pnl as number) ?? 0);
+          setKalshiWinRate((kd.win_rate as number) ?? 0);
         }
       } catch { /* */ }
       setKalshiLoading(false);
@@ -162,32 +166,27 @@ export default function PositionsPage() {
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs text-muted-foreground">
-              Kalshi Exposure
+              Kalshi P&L
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg font-bold font-mono">
-              {kalshiPositions.length > 0 ? fmtCurrency(kalshiExposure) : "--"}
+            <p className={`text-lg font-bold font-mono ${kalshiPnl >= 0 ? "text-profit" : "text-loss"}`}>
+              {kalshiPnl !== 0 ? `${kalshiPnl >= 0 ? "+" : ""}$${kalshiPnl.toFixed(2)}` : "--"}
             </p>
           </CardContent>
         </Card>
-        {(
-          [
-            ["Delta", totals.delta],
-            ["Theta", totals.theta],
-          ] as const
-        ).map(([label, val]) => (
-          <Card key={label}>
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs text-muted-foreground">
-                {label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-bold font-mono">{fmt(val)}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs text-muted-foreground">
+              Kalshi Win Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-lg font-bold font-mono ${kalshiWinRate >= 50 ? "text-profit" : kalshiWinRate > 0 ? "text-loss" : ""}`}>
+              {kalshiWinRate > 0 ? `${kalshiWinRate}%` : "--"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Kalshi Positions */}
@@ -273,14 +272,17 @@ export default function PositionsPage() {
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Avg Cost</TableHead>
                     <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Mkt Value</TableHead>
                     <TableHead className="text-right">P&L</TableHead>
-                    <TableHead className="text-right">IV</TableHead>
-                    <TableHead className="text-right">Delta</TableHead>
-                    <TableHead className="text-right">Theta</TableHead>
+                    <TableHead className="text-right">P&L %</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {positions.map((p) => (
+                  {positions.map((p) => {
+                    const pnlPct = p.avg_cost && p.current_price
+                      ? ((p.current_price - p.avg_cost) / p.avg_cost) * 100
+                      : p.pnl_pct;
+                    return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.ticker}</TableCell>
                       <TableCell className="uppercase text-xs">
@@ -295,8 +297,11 @@ export default function PositionsPage() {
                       <TableCell className="text-right font-mono">
                         {fmtCurrency(p.current_price)}
                       </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {fmtCurrency(p.market_value)}
+                      </TableCell>
                       <TableCell
-                        className={`text-right font-mono ${
+                        className={`text-right font-mono font-bold ${
                           (p.unrealized_pnl ?? 0) >= 0
                             ? "text-profit"
                             : "text-loss"
@@ -304,17 +309,18 @@ export default function PositionsPage() {
                       >
                         {fmtCurrency(p.unrealized_pnl)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {p.iv ? `${(p.iv * 100).toFixed(0)}%` : "--"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {fmt(p.delta)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {fmt(p.theta)}
+                      <TableCell
+                        className={`text-right font-mono font-bold ${
+                          (pnlPct ?? 0) >= 0
+                            ? "text-profit"
+                            : "text-loss"
+                        }`}
+                      >
+                        {pnlPct != null ? `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(1)}%` : "--"}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
               </div>
