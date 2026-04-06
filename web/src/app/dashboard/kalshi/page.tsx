@@ -26,10 +26,33 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+interface KalshiBalance {
+  balance_dollars: number;
+  portfolio_value_dollars: number;
+}
+
+interface KalshiMarket {
+  ticker: string;
+  title: string;
+  subtitle?: string;
+  yes_bid: number | null;
+  no_bid: number | null;
+  yes_ask: number | null;
+  no_ask: number | null;
+  volume: number;
+  open_interest: number;
+  close_time: string;
+  event_title?: string;
+}
+
 export default function KalshiPage() {
   const supabase = createClient();
   const [activity, setActivity] = useState<KalshiActivity[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [balance, setBalance] = useState<KalshiBalance | null>(null);
+  const [mastersMarkets, setMastersMarkets] = useState<KalshiMarket[]>([]);
+  const [mastersLoading, setMastersLoading] = useState(true);
+  const [tab, setTab] = useState<"activity" | "masters">("activity");
 
   useEffect(() => {
     async function load() {
@@ -58,6 +81,30 @@ export default function KalshiPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // Fetch Kalshi balance and Masters markets
+  useEffect(() => {
+    async function loadKalshi() {
+      try {
+        const balResp = await fetch("/api/kalshi?action=balance");
+        if (balResp.ok) {
+          const data = await balResp.json();
+          if (!data.error) setBalance(data);
+        }
+      } catch { /* Kalshi API may not be configured on Vercel */ }
+
+      try {
+        setMastersLoading(true);
+        const mastersResp = await fetch("/api/kalshi?action=masters");
+        if (mastersResp.ok) {
+          const data = await mastersResp.json();
+          setMastersMarkets(data.markets ?? []);
+        }
+      } catch { /* */ }
+      setMastersLoading(false);
+    }
+    loadKalshi();
   }, []);
 
   const trades = activity.filter((a) => a.event_type === "trade_executed");
@@ -89,41 +136,146 @@ export default function KalshiPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
-              Scans
-            </p>
-            <p className="text-xl font-bold font-mono">{scans.length}</p>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Balance</p>
+            <p className="text-lg font-bold font-mono">{balance ? `$${balance.balance_dollars.toFixed(2)}` : "—"}</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
-              Trades
-            </p>
-            <p className="text-xl font-bold font-mono text-teal">{trades.length}</p>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Portfolio</p>
+            <p className="text-lg font-bold font-mono text-teal">{balance ? `$${balance.portfolio_value_dollars.toFixed(2)}` : "—"}</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
-              Contracts
-            </p>
-            <p className="text-xl font-bold font-mono text-gold">{totalContracts}</p>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Scans</p>
+            <p className="text-lg font-bold font-mono">{scans.length}</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">
-              Mode
-            </p>
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Trades</p>
+            <p className="text-lg font-bold font-mono text-teal">{trades.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Contracts</p>
+            <p className="text-lg font-bold font-mono text-gold">{totalContracts}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <p className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Mode</p>
             <p className="text-sm font-bold font-mono text-gold">LIVE</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab("activity")}
+          className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+            tab === "activity" ? "bg-teal text-teal-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          AI Activity
+        </button>
+        <button
+          onClick={() => setTab("masters")}
+          className={`px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+            tab === "masters" ? "bg-profit text-white" : "bg-card border border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Masters Golf
+        </button>
+      </div>
+
+      {/* Masters Golf Tab */}
+      {tab === "masters" && (
+        <div className="space-y-4">
+          <Card className="bg-card border-border border-profit/20">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-2xl">⛳</span>
+                <div>
+                  <h3 className="text-sm font-semibold">The Masters — Augusta National</h3>
+                  <p className="text-xs text-muted-foreground">AI analyzes golfer odds, weather, course history, and prediction market pricing to find edges</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {mastersLoading ? (
+            <Card className="bg-card border-border">
+              <CardContent className="py-12 text-center">
+                <div className="inline-flex items-center gap-2">
+                  <svg className="h-4 w-4 animate-spin text-profit" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-muted-foreground">Loading Masters markets...</span>
+                </div>
+              </CardContent>
+            </Card>
+          ) : mastersMarkets.length === 0 ? (
+            <Card className="bg-card border-border">
+              <CardContent className="py-12 text-center">
+                <span className="text-3xl mb-3 block">⛳</span>
+                <p className="text-muted-foreground">No Masters/golf markets found on Kalshi right now.</p>
+                <p className="text-xs text-muted-foreground mt-2">Markets typically appear closer to tournament dates. The AI bot will automatically scan and trade these when available.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {mastersMarkets.map((market, i) => (
+                <div
+                  key={`${market.ticker}-${i}`}
+                  className="rounded-xl bg-card border border-border hover:border-profit/30 transition-all px-5 py-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold">{market.title}</span>
+                        {market.subtitle && (
+                          <span className="text-xs text-muted-foreground">{market.subtitle}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-[10px] font-mono text-muted-foreground">
+                        <span>{market.ticker}</span>
+                        {market.volume != null && <span>Vol: {market.volume}</span>}
+                        {market.open_interest != null && <span>OI: {market.open_interest}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {market.yes_bid != null && (
+                        <div className="text-center">
+                          <p className="text-lg font-mono font-bold text-profit">{market.yes_bid}¢</p>
+                          <p className="text-[9px] text-muted-foreground">YES</p>
+                        </div>
+                      )}
+                      {market.no_bid != null && (
+                        <div className="text-center">
+                          <p className="text-lg font-mono font-bold text-loss">{market.no_bid}¢</p>
+                          <p className="text-[9px] text-muted-foreground">NO</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Activity Tab */}
+      {tab === "activity" && (
+        <>
       {/* How it works */}
       <Card className="bg-card border-border border-teal/20">
         <CardContent className="p-5">
@@ -355,6 +507,8 @@ export default function KalshiPage() {
             );
           })}
         </div>
+      )}
+      </>
       )}
     </div>
   );
