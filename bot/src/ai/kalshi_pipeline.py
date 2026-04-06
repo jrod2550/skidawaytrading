@@ -76,13 +76,16 @@ CULTURE & TECH:
 PRICING & EDGE DETECTION:
 - Kalshi price in cents (1-99). Price = market-implied probability.
 - Your edge = your estimated probability - market price.
-- Minimum edge for a trade: 8% on high-confidence, 12% on medium.
+- Minimum edge for a trade: 5%. Be aggressive — we want volume and action.
+- If you see ANY edge on sports, weather, politics, culture — TAKE IT.
 - Half-Kelly position sizing: bet proportional to edge.
+- Use fill_or_kill for instant execution on liquid markets.
 
 POSITION LIMITS:
 - Max $100 per single market position
-- Max 15 simultaneous positions across all categories
-- Max $25 per trade on sports/culture (lower conviction category)
+- Max 20 simultaneous positions across all categories
+- Sports, culture, weather — be aggressive, $50 max per trade
+- Find opportunities across EVERY category, not just finance
 
 Always respond in valid JSON."""
 
@@ -281,14 +284,14 @@ class KalshiPipeline:
         for cat, markets_in_cat in by_category.items():
             with_pricing = [m for m in markets_in_cat if m.get("has_pricing")]
             without_pricing = [m for m in markets_in_cat if not m.get("has_pricing")]
-            # Take up to 3 with pricing, 1 without from each category
-            selected = with_pricing[:3] + without_pricing[:1]
+            # Take up to 4 with pricing, 1 without from each category
+            selected = with_pricing[:4] + without_pricing[:1]
             top_markets.extend(selected)
 
-        # Cap at 20 total, prioritize priced markets
+        # Cap at 25 total, prioritize priced markets
         priced = [m for m in top_markets if m.get("has_pricing")]
         unpriced = [m for m in top_markets if not m.get("has_pricing")]
-        top_markets = (priced + unpriced)[:20]
+        top_markets = (priced + unpriced)[:25]
 
         logger.info("Scanning %d Kalshi markets (%d by volume)", len(markets), len(top_markets))
 
@@ -472,12 +475,12 @@ class KalshiPipeline:
                     confidence_score=confidence,
                 )
 
-            # Only execute if meets thresholds
+            # Only execute if meets thresholds (aggressive)
             if recommendation == "SKIP":
                 continue
-            if confidence < 55:
+            if confidence < 40:
                 continue
-            if abs(edge) < 8:
+            if abs(edge) < 5:
                 continue
 
             if not ticker:
