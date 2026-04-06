@@ -98,14 +98,33 @@ async def sync_kalshi_to_supabase(kalshi: KalshiClient) -> None:
                 "settled_at": s.get("settled_time"),
             })
 
+        # Get or set starting balance (first time we sync)
+        current_balance = balance_cents / 100
+        try:
+            start_row = db.table("bot_config").select("value").eq("key", "kalshi_starting_balance").execute()
+            if start_row.data and start_row.data[0].get("value") is not None:
+                starting_balance = float(start_row.data[0]["value"])
+            else:
+                starting_balance = current_balance
+                db.table("bot_config").upsert({
+                    "key": "kalshi_starting_balance",
+                    "value": current_balance,
+                }).execute()
+        except Exception:
+            starting_balance = current_balance
+
+        # Real P&L = current balance + portfolio value - starting balance
+        real_pnl = round(current_balance + (portfolio_cents / 100) - starting_balance, 2)
+
         # Upsert to bot_config as JSON (simple, no new tables needed)
         snapshot = {
-            "balance_dollars": balance_cents / 100,
+            "balance_dollars": current_balance,
             "portfolio_value_dollars": portfolio_cents / 100,
+            "starting_balance": starting_balance,
             "positions": open_positions,
             "fills": fill_list,
             "settlements": settlement_list,
-            "total_pnl": round(total_pnl, 2),
+            "total_pnl": real_pnl,
             "total_spent": round(sum(f["total_cost_dollars"] for f in fill_list if f["action"] == "buy"), 2),
             "wins": wins,
             "losses": losses,
