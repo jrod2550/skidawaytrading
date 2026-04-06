@@ -72,9 +72,11 @@ export async function GET(request: Request) {
 
     if (action === "positions") {
       const data = await kalshiFetch("/portfolio/positions?limit=50");
+      const fills = await kalshiFetch("/portfolio/fills?limit=50");
       return NextResponse.json({
         positions: data?.market_positions ?? [],
         event_positions: data?.event_positions ?? [],
+        fills: fills?.fills ?? [],
       });
     }
 
