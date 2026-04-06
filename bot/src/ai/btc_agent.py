@@ -76,14 +76,14 @@ ORDER BOOK DEPTH:
 
 CRYPTO ETF INSTITUTIONAL FLOW (Unusual Whales):
 {crypto_flow}
-
+{memory}
 Your call. JSON response:
 {{
   "direction": "UP" or "DOWN",
   "side": "yes" or "no",
   "confidence": 50-100,
   "edge_pct": estimated edge over market price,
-  "reasoning": "2-3 sentences citing SPECIFIC data: candle count, volume ratio, order book walls, ETF flow premiums"
+  "reasoning": "2-3 sentences citing SPECIFIC data: candle count, volume ratio, order book walls, ETF flow premiums. Explain why you chose this direction given recent results."
 }}"""
 
 
@@ -109,6 +109,45 @@ class BTCAgent:
             }).execute()
         except Exception:
             pass
+
+    def _get_recent_results(self, limit: int = 10) -> list[dict]:
+        """Pull recent BTC settlement results from Supabase for memory loop."""
+        try:
+            import re
+            settlements_raw = self.db.table("bot_config").select("value").eq("key", "kalshi_snapshot").execute()
+            if not settlements_raw.data:
+                return []
+            snapshot = settlements_raw.data[0].get("value", {})
+            settlements = snapshot.get("settlements", [])
+
+            results = []
+            for s in settlements:
+                ticker = s.get("ticker", "")
+                if "KXBTC15M" not in ticker:
+                    continue
+                market_result = s.get("market_result", "")
+                went_up = market_result == "yes"
+                yes_ct = s.get("yes_count", 0)
+                no_ct = s.get("no_count", 0)
+                profit = s.get("profit_dollars", 0)
+
+                if yes_ct > 0 and no_ct == 0:
+                    bet = "YES"
+                elif no_ct > 0 and yes_ct == 0:
+                    bet = "NO"
+                else:
+                    bet = "CONFLICT"
+
+                results.append({
+                    "market_went": "UP" if went_up else "DOWN",
+                    "bet": bet,
+                    "won": profit > 0,
+                    "profit": profit,
+                })
+
+            return results[:limit]
+        except Exception:
+            return []
 
     async def _get_crypto_flow(self) -> dict:
         """Get institutional crypto ETF flow from Unusual Whales."""
@@ -246,6 +285,28 @@ class BTCAgent:
             self._get_crypto_flow(),
         )
 
+        # MEMORY LOOP — check recent results so the AI can learn
+        recent_results = self._get_recent_results()
+        memory_text = ""
+        if recent_results:
+            up_count = sum(1 for r in recent_results if r["market_went"] == "UP")
+            down_count = len(recent_results) - up_count
+            yes_wins = sum(1 for r in recent_results if r["bet"] == "YES" and r["won"])
+            no_wins = sum(1 for r in recent_results if r["bet"] == "NO" and r["won"])
+            yes_total = sum(1 for r in recent_results if r["bet"] == "YES")
+            no_total = sum(1 for r in recent_results if r["bet"] == "NO")
+            memory_text = f"""
+YOUR RECENT TRACK RECORD (last {len(recent_results)} windows):
+- BTC went UP {up_count}/{len(recent_results)} times ({up_count/len(recent_results)*100:.0f}%)
+- BTC went DOWN {down_count}/{len(recent_results)} times ({down_count/len(recent_results)*100:.0f}%)
+- Your YES bets: {yes_wins}/{yes_total} won ({yes_wins/yes_total*100:.0f}% win rate)
+- Your NO bets: {no_wins}/{no_total} won ({no_wins/no_total*100:.0f}% win rate)
+
+{"WARNING: BTC has been going UP " + str(up_count/len(recent_results)*100) + "% of the time. STRONGLY favor YES unless you see clear reversal signals." if up_count > down_count * 1.5 else ""}
+{"WARNING: BTC has been going DOWN " + str(down_count/len(recent_results)*100) + "% of the time. STRONGLY favor NO unless you see clear reversal signals." if down_count > up_count * 1.5 else ""}
+{"WARNING: Your NO bets are losing money. Consider sticking with YES." if no_total > 2 and no_wins == 0 else ""}
+"""
+
         # Build prompt
         prompt = BTC_ANALYSIS_PROMPT.format(
             ticker=ticker,
@@ -257,6 +318,7 @@ class BTCAgent:
             btc_data=json.dumps(btc_data, indent=2),
             orderbook_data=json.dumps(orderbook, indent=2),
             crypto_flow=json.dumps(crypto_flow, indent=2),
+            memory=memory_text,
         )
 
         try:
@@ -313,8 +375,8 @@ class BTCAgent:
         if price_cents <= 0:
             price_cents = 50
 
-        # Size based on confidence — strong signal $5, weak signal $3
-        bet_cents = 500 if confidence >= 65 else 300
+        # Conservative sizing — $3 strong, $2 weak (protect remaining balance)
+        bet_cents = 300 if confidence >= 65 else 200
         contracts = max(1, round(bet_cents / price_cents))
 
         bet_desc = f"BTC 15-min: {direction} — {'YES' if side == 'yes' else 'NO'} {contracts}x @ {price_cents}¢ = ${contracts * price_cents / 100:.2f}"
