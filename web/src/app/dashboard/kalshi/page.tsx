@@ -356,9 +356,13 @@ export default function KalshiPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
+                      {/* Bet description — the most important line */}
+                      {typeof details.bet === "string" && (
+                        <p className="text-sm font-semibold text-foreground mb-1">{details.bet}</p>
+                      )}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold">
-                          {typeof details.market_title === "string" ? details.market_title : (event.ticker?.replace("KALSHI:", "") ?? "Kalshi")}
+                        <span className={`text-sm ${typeof details.bet === "string" ? "text-muted-foreground" : "font-semibold"}`}>
+                          {typeof details.bet !== "string" ? (typeof details.market_title === "string" ? details.market_title : (event.ticker?.replace("KALSHI:", "") ?? "Kalshi")) : ""}
                         </span>
                         <Badge variant="outline" className={`text-[9px] ${
                           isTrade ? "border-teal text-teal" :

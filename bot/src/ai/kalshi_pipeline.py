@@ -535,16 +535,23 @@ class KalshiPipeline:
                     time_in_force="fill_or_kill",
                 )
 
+                # Build clear bet description
+                bet_side = "YES" if side == "yes" else "NO"
+                bet_desc = f"BUY {bet_side} on \"{market_title}\" — {contracts}x @ {price}¢ = ${(contracts * price / 100):.2f}"
+                fill_status = order.get("status", "unknown")
+
                 self._log_activity(
                     "trade_executed",
                     ticker=ticker,
                     details={
                         "platform": "kalshi",
+                        "bet": bet_desc,
                         "market_title": market_title,
                         "side": side,
                         "contracts": contracts,
                         "price_cents": price,
                         "total_cost": f"${(contracts * price / 100):.2f}",
+                        "fill_status": fill_status,
                         "edge_pct": rec.get("edge_pct"),
                         "estimated_prob": rec.get("your_estimated_probability"),
                         "category": category,
