@@ -223,11 +223,37 @@ export default function KalshiPage() {
               </CardContent>
             </Card>
           ) : mastersMarkets.length === 0 ? (
-            <Card className="bg-card border-border">
-              <CardContent className="py-12 text-center">
-                <span className="text-3xl mb-3 block">⛳</span>
-                <p className="text-muted-foreground">No Masters/golf markets found on Kalshi right now.</p>
-                <p className="text-xs text-muted-foreground mt-2">Markets typically appear closer to tournament dates. The AI bot will automatically scan and trade these when available.</p>
+            <Card className="bg-card border-border border-profit/20">
+              <CardContent className="p-6 text-center">
+                <span className="text-4xl mb-3 block">⛳</span>
+                <p className="text-lg font-semibold">The Masters Tournament 2025</p>
+                <p className="text-sm text-muted-foreground mt-1">Augusta National Golf Club</p>
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[oklch(0.65_0.16_85_/_0.08)] border border-gold/20 px-4 py-2">
+                  <div className="h-2 w-2 rounded-full bg-gold animate-pulse-live" />
+                  <span className="text-xs font-semibold text-gold">Markets open soon — Tournament begins Thursday, April 10</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-4 max-w-md mx-auto">
+                  Kalshi will open prediction markets for the Masters 1-2 days before the event.
+                  When they go live, our AI will analyze golfer odds, weather conditions, course history,
+                  and betting flow to find mispricings. The bot will auto-trade edges 8%+.
+                </p>
+                <div className="mt-6 grid grid-cols-3 gap-3 max-w-sm mx-auto text-left">
+                  <div className="rounded-lg bg-muted p-3">
+                    <p className="text-[9px] uppercase text-muted-foreground">Favorite</p>
+                    <p className="text-xs font-semibold">Scheffler</p>
+                    <p className="text-[10px] font-mono text-profit">~15%</p>
+                  </div>
+                  <div className="rounded-lg bg-muted p-3">
+                    <p className="text-[9px] uppercase text-muted-foreground">Contender</p>
+                    <p className="text-xs font-semibold">DeChambeau</p>
+                    <p className="text-[10px] font-mono text-gold">~8%</p>
+                  </div>
+                  <div className="rounded-lg bg-muted p-3">
+                    <p className="text-[9px] uppercase text-muted-foreground">Contender</p>
+                    <p className="text-xs font-semibold">Rahm</p>
+                    <p className="text-[10px] font-mono text-gold">~8%</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ) : (

@@ -87,31 +87,41 @@ export async function GET(request: Request) {
     }
 
     if (action === "masters") {
-      // Search for golf/Masters related markets
-      const data = await kalshiFetch("/events?limit=100");
-      const events = data?.events ?? [];
-      const golfEvents = events.filter((e: Record<string, unknown>) => {
+      // Get the Masters event directly by known ticker
+      const mastersEvent = await kalshiFetch("/events/KXMASTERS-25");
+
+      // Get Masters markets
+      const marketsData = await kalshiFetch("/markets?event_ticker=KXMASTERS-25&limit=100");
+      const markets = marketsData?.markets ?? [];
+
+      // Also search for any other golf/PGA events
+      const allEvents = await kalshiFetch("/events?limit=200");
+      const golfEvents = (allEvents?.events ?? []).filter((e: Record<string, unknown>) => {
         const title = String(e.title ?? "").toLowerCase();
         const ticker = String(e.event_ticker ?? "").toLowerCase();
         return title.includes("golf") || title.includes("masters") || title.includes("pga") ||
                ticker.includes("golf") || ticker.includes("masters") || ticker.includes("pga");
       });
 
-      // For each golf event, get the markets
-      const allMarkets: Record<string, unknown>[] = [];
+      // Get markets for any other golf events
       for (const event of golfEvents.slice(0, 5)) {
         const eventTicker = event.event_ticker;
-        const marketsData = await kalshiFetch(`/markets?event_ticker=${eventTicker}&status=open&limit=50`);
-        if (marketsData?.markets) {
-          for (const m of marketsData.markets) {
-            allMarkets.push({ ...m, event_title: event.title });
+        if (eventTicker === "KXMASTERS-25") continue;
+        const moreMarkets = await kalshiFetch(`/markets?event_ticker=${eventTicker}&limit=50`);
+        if (moreMarkets?.markets) {
+          for (const m of moreMarkets.markets) {
+            markets.push({ ...m, event_title: event.title });
           }
         }
       }
 
       return NextResponse.json({
+        event: mastersEvent ?? null,
         events: golfEvents,
-        markets: allMarkets,
+        markets,
+        status: markets.length === 0
+          ? "Markets not yet open for trading. The Masters begins Thursday, April 10. Kalshi typically opens markets 1-2 days before the event."
+          : `${markets.length} markets available`,
       });
     }
 
