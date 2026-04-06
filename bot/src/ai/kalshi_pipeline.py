@@ -257,17 +257,18 @@ class KalshiPipeline:
             m["_category"] = cat
             by_category.setdefault(cat, []).append(m)
 
-        # Pick up to 3 from each category, prioritizing those with actual pricing
+        # Pick from each category — include markets with AND without pricing
+        # The AI can still analyze probability even without live bids
         top_markets = []
         for cat, markets_in_cat in by_category.items():
-            # Prefer markets with actual bid/ask data
             with_pricing = [m for m in markets_in_cat if m.get("yes_bid") or m.get("yes_ask")]
             without_pricing = [m for m in markets_in_cat if not m.get("yes_bid") and not m.get("yes_ask")]
-            selected = with_pricing[:3] + without_pricing[:1]  # 3 with pricing, 1 without
-            top_markets.extend(selected[:3])
+            # Take 2 with pricing + 2 without from each category
+            selected = with_pricing[:2] + without_pricing[:2]
+            top_markets.extend(selected)
 
-        # Cap at 18 total
-        top_markets = top_markets[:18]
+        # Cap at 20 total
+        top_markets = top_markets[:20]
 
         logger.info("Scanning %d Kalshi markets (%d by volume)", len(markets), len(top_markets))
 
@@ -421,25 +422,48 @@ class KalshiPipeline:
                 ai_reasoning=cross_insights,
             )
 
-        # Execute recommended trades
+        # Log each recommendation individually so they show on the Kalshi page
         trades_placed = 0
         recommendations = analysis.get("analysis", [])
 
         for rec in recommendations:
-            if rec.get("recommendation") == "SKIP":
+            ticker = rec.get("ticker", "")
+            category = rec.get("category", "other")
+            recommendation = rec.get("recommendation", "SKIP")
+            edge = rec.get("edge_pct", 0)
+            confidence = rec.get("confidence", 0)
+
+            # Log EVERY recommendation (even SKIPs) so user can see what AI is thinking
+            if recommendation != "SKIP":
+                self._log_activity(
+                    "signal_created",
+                    ticker=ticker,
+                    details={
+                        "platform": "kalshi",
+                        "recommendation": recommendation,
+                        "edge_pct": edge,
+                        "estimated_prob": rec.get("your_estimated_probability"),
+                        "market_price_yes_cents": rec.get("market_price_yes_cents"),
+                        "contracts": rec.get("contracts"),
+                        "category": category,
+                        "cross_reference": rec.get("cross_reference"),
+                    },
+                    ai_reasoning=rec.get("reasoning"),
+                    confidence_score=confidence,
+                )
+
+            # Only execute if meets thresholds
+            if recommendation == "SKIP":
                 continue
-            if rec.get("confidence", 0) < 55:
+            if confidence < 55:
                 continue
-            if abs(rec.get("edge_pct", 0)) < 8:
+            if abs(edge) < 8:
                 continue
 
-            ticker = rec.get("ticker")
             if not ticker:
                 continue
 
-            recommendation = rec.get("recommendation", "")
             side = "yes" if "YES" in recommendation.upper() else "no"
-            category = rec.get("category", "other")
 
             # Category-based position limits
             max_contracts = 10
