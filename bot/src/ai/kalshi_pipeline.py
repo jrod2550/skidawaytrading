@@ -279,19 +279,23 @@ class KalshiPipeline:
             m["_category"] = cat
             by_category.setdefault(cat, []).append(m)
 
-        # Prioritize markets WITH pricing — those are actually tradeable
-        top_markets = []
-        for cat, markets_in_cat in by_category.items():
-            with_pricing = [m for m in markets_in_cat if m.get("has_pricing")]
-            without_pricing = [m for m in markets_in_cat if not m.get("has_pricing")]
-            # Take up to 4 with pricing, 1 without from each category
-            selected = with_pricing[:4] + without_pricing[:1]
-            top_markets.extend(selected)
+        # ONLY look at liquid markets — must have pricing AND volume
+        liquid = [m for m in formatted if m.get("has_pricing") and m.get("volume", 0) > 0]
+        liquid.sort(key=lambda x: x.get("volume", 0), reverse=True)
 
-        # Cap at 25 total, prioritize priced markets
-        priced = [m for m in top_markets if m.get("has_pricing")]
-        unpriced = [m for m in top_markets if not m.get("has_pricing")]
-        top_markets = (priced + unpriced)[:25]
+        # Group liquid markets by category, pick top from each
+        top_markets = []
+        liquid_by_cat: dict[str, list] = {}
+        for m in liquid:
+            cat = m.get("_category", "other")
+            liquid_by_cat.setdefault(cat, []).append(m)
+
+        for cat, cat_markets in liquid_by_cat.items():
+            top_markets.extend(cat_markets[:4])
+
+        # Cap at 25, sorted by volume
+        top_markets.sort(key=lambda x: x.get("volume", 0), reverse=True)
+        top_markets = top_markets[:25]
 
         logger.info("Scanning %d Kalshi markets (%d by volume)", len(markets), len(top_markets))
 
