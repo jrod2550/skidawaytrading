@@ -13,6 +13,7 @@ const statusColors: Record<string, string> = {
   rejected: "border-loss text-loss bg-[oklch(0.52_0.22_25_/_0.06)]",
   expired: "border-muted-foreground text-muted-foreground",
   executed: "border-teal text-teal bg-[oklch(0.55_0.18_175_/_0.06)]",
+  suggestion: "border-gold text-gold bg-[oklch(0.65_0.16_85_/_0.06)]",
 };
 
 function timeAgo(dateStr: string) {
@@ -52,7 +53,54 @@ export default function SignalsPage() {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
-      if (data) setSignals(data);
+
+      // Also fetch Kalshi suggestions from ai_activity
+      const { data: kalshiData } = await supabase
+        .from("ai_activity")
+        .select("*")
+        .like("ticker", "KALSHI:%")
+        .eq("event_type", "signal_created")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      // Convert Kalshi activity to signal-like format
+      const kalshiSignals: Signal[] = (kalshiData ?? []).map((k) => {
+        const details = (k.details ?? {}) as Record<string, unknown>;
+        return {
+          id: k.id,
+          source: "kalshi",
+          status: details.recommendation ? "suggestion" : "pending",
+          ticker: String(k.ticker ?? "").replace("KALSHI:", ""),
+          direction: String(details.recommendation ?? "").includes("YES") ? "bullish" : "bearish",
+          confidence_score: k.confidence_score,
+          source_data: {
+            ai_analysis: {
+              reasoning: k.ai_reasoning,
+              recommended_trade: details,
+              flow_quality: details.category,
+              iv_assessment: null,
+              gex_context: null,
+              dark_pool_alignment: null,
+              risk_factors: [],
+            },
+          },
+          scoring_factors: {
+            thesis: k.ai_reasoning,
+            edge_pct: details.edge_pct,
+            estimated_prob: details.estimated_prob,
+            market_price: details.market_price_yes_cents,
+          },
+          suggested_action: String(details.recommendation ?? ""),
+          suggested_strike: null,
+          suggested_expiry: null,
+          suggested_quantity: details.contracts as number | null,
+          created_at: k.created_at,
+          reviewed_at: null,
+          reviewed_by: null,
+        } as Signal;
+      });
+
+      if (data) setSignals([...(data ?? []), ...kalshiSignals].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     }
 
     load();
@@ -255,6 +303,12 @@ export default function SignalsPage() {
                             {sig.suggested_strike ? ` @ $${sig.suggested_strike}` : ""}
                             {sig.suggested_expiry ? ` exp ${sig.suggested_expiry}` : ""}
                           </span>
+                        )}
+                        {scoring.edge_pct != null && (
+                          <span className="font-mono text-profit">edge: {String(scoring.edge_pct)}%</span>
+                        )}
+                        {scoring.market_price != null && (
+                          <span className="font-mono">{String(scoring.market_price)}¢</span>
                         )}
                         <span>{timeAgo(sig.created_at)}</span>
                         {typeof scoring.thesis === "string" && (

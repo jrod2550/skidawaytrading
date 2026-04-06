@@ -7,8 +7,8 @@ export interface Profile {
   created_at: string;
 }
 
-export type SignalStatus = "pending" | "approved" | "rejected" | "expired" | "executed";
-export type SignalSource = "congressional" | "flow" | "polymarket" | "manual";
+export type SignalStatus = "pending" | "approved" | "rejected" | "expired" | "executed" | "suggestion";
+export type SignalSource = "congressional" | "flow" | "polymarket" | "manual" | "kalshi";
 
 export interface Signal {
   id: string;
@@ -16,18 +16,18 @@ export interface Signal {
   status: SignalStatus;
   ticker: string;
   direction: "bullish" | "bearish";
-  confidence_score: number;
+  confidence_score: number | null;
   source_data: Record<string, unknown>;
-  scoring_factors: Record<string, number>;
+  scoring_factors: Record<string, unknown>;
   suggested_action: string | null;
   suggested_strike: number | null;
   suggested_expiry: string | null;
   suggested_quantity: number | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
-  review_note: string | null;
+  review_note?: string | null;
   created_at: string;
-  expires_at: string | null;
+  expires_at?: string | null;
 }
 
 export type TradeStatus = "pending" | "filled" | "partial" | "cancelled" | "failed";
