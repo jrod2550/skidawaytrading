@@ -83,29 +83,24 @@ export default function TradesPage() {
         .limit(100);
       if (data) setIbkrTrades(data);
 
-      try {
-        const [balResp, posResp] = await Promise.all([
-          fetch("/api/kalshi?action=balance"),
-          fetch("/api/kalshi?action=positions"),
-        ]);
-        if (balResp.ok) {
-          const bd = await balResp.json();
-          if (!bd.error) setKalshiBalance(bd.balance_dollars);
-        }
-        if (posResp.ok) {
-          const kd = await posResp.json();
-          if (!kd.error) {
-            setKalshiFills(kd.fills ?? []);
-            setKalshiSettlements(kd.settlements ?? []);
-            setKalshiPositions(kd.positions ?? []);
-            setKalshiPnl(kd.total_pnl ?? 0);
-            setKalshiWins(kd.wins ?? 0);
-            setKalshiLosses(kd.losses ?? 0);
-            setKalshiWinRate(kd.win_rate ?? 0);
-            setKalshiSpent(kd.total_spent ?? 0);
-          }
-        }
-      } catch { /* */ }
+      // Read Kalshi snapshot from Supabase (synced by bot on NUC every 5 min)
+      const { data: configRow } = await supabase
+        .from("bot_config")
+        .select("value")
+        .eq("key", "kalshi_snapshot")
+        .single();
+      if (configRow?.value) {
+        const kd = configRow.value as Record<string, unknown>;
+        setKalshiBalance((kd.balance_dollars as number) ?? null);
+        setKalshiFills((kd.fills as KalshiFill[]) ?? []);
+        setKalshiSettlements((kd.settlements as KalshiSettlement[]) ?? []);
+        setKalshiPositions((kd.positions as KalshiPosition[]) ?? []);
+        setKalshiPnl((kd.total_pnl as number) ?? 0);
+        setKalshiWins((kd.wins as number) ?? 0);
+        setKalshiLosses((kd.losses as number) ?? 0);
+        setKalshiWinRate((kd.win_rate as number) ?? 0);
+        setKalshiSpent((kd.total_spent as number) ?? 0);
+      }
     }
     load();
   }, []);

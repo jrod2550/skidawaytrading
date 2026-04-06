@@ -168,11 +168,13 @@ class IBKRBroker(BrokerAdapter):
 
     async def get_positions(self) -> list[BrokerPosition]:
         self._ib.sleep(0)  # process pending events
-        positions = self._ib.positions()
+
+        # Use portfolio() which includes market value and unrealized P&L
+        portfolio_items = self._ib.portfolio()
         result: list[BrokerPosition] = []
 
-        for pos in positions:
-            contract = pos.contract
+        for item in portfolio_items:
+            contract = item.contract
             is_option = contract.secType == "OPT"
 
             bp = BrokerPosition(
@@ -181,13 +183,33 @@ class IBKRBroker(BrokerAdapter):
                 call_put="call" if getattr(contract, "right", "") == "C" else "put" if getattr(contract, "right", "") == "P" else None,
                 strike=getattr(contract, "strike", None),
                 expiry=getattr(contract, "lastTradeDateOrContractMonth", None),
-                quantity=int(pos.position),
-                avg_cost=pos.avgCost / 100 if is_option else pos.avgCost,
-                current_price=None,
-                market_value=None,
-                unrealized_pnl=None,
+                quantity=int(item.position),
+                avg_cost=item.averageCost / 100 if is_option else item.averageCost,
+                current_price=item.marketPrice,
+                market_value=item.marketValue,
+                unrealized_pnl=item.unrealizedPNL,
             )
             result.append(bp)
+
+        # Fallback to positions() if portfolio is empty
+        if not result:
+            positions = self._ib.positions()
+            for pos in positions:
+                contract = pos.contract
+                is_option = contract.secType == "OPT"
+                bp = BrokerPosition(
+                    ticker=contract.symbol,
+                    option_symbol=contract.localSymbol if is_option else None,
+                    call_put="call" if getattr(contract, "right", "") == "C" else "put" if getattr(contract, "right", "") == "P" else None,
+                    strike=getattr(contract, "strike", None),
+                    expiry=getattr(contract, "lastTradeDateOrContractMonth", None),
+                    quantity=int(pos.position),
+                    avg_cost=pos.avgCost / 100 if is_option else pos.avgCost,
+                    current_price=None,
+                    market_value=None,
+                    unrealized_pnl=None,
+                )
+                result.append(bp)
 
         return result
 

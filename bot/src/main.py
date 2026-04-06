@@ -109,7 +109,7 @@ async def main() -> None:
             misfire_grace_time=120,
         )
 
-    # ── BTC 15-min Agent — every 14 minutes (one shot per window, saves ~$19/day vs 2-min) ──
+    # ── BTC 15-min Agent — every 2 minutes (profitable, keep aggressive) ──
     btc_agent = None
     if settings.kalshi_api_key:
         from src.ai.btc_agent import BTCAgent
@@ -117,12 +117,25 @@ async def main() -> None:
         scheduler.add_job(
             btc_agent.run,
             "interval",
-            minutes=14,
+            minutes=2,
             id="btc_15min_agent",
+            max_instances=1,
+            misfire_grace_time=30,
+        )
+        logger.info("BTC 15-min Agent enabled — $10/bet every 2 min")
+
+    # ── Kalshi -> Supabase sync — every 5 minutes (so web app can display) ──
+    if kalshi_pipeline:
+        from src.execution.kalshi_sync import sync_kalshi_to_supabase
+        scheduler.add_job(
+            sync_kalshi_to_supabase,
+            "interval",
+            minutes=5,
+            args=[kalshi],
+            id="kalshi_sync",
             max_instances=1,
             misfire_grace_time=60,
         )
-        logger.info("BTC 15-min Agent enabled — $5/bet, every 14 min (1 per window)")
 
     # ── Expire old signals — every 15 minutes ──
     scheduler.add_job(

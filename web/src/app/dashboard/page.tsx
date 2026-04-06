@@ -228,6 +228,8 @@ export default function DashboardOverview() {
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [market, setMarket] = useState<MarketData | null>(null);
   const [kalshiBalance, setKalshiBalance] = useState<{ balance_dollars: number; portfolio_value_dollars: number } | null>(null);
+  const [kalshiPnl, setKalshiPnl] = useState(0);
+  const [kalshiWinRate, setKalshiWinRate] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -277,14 +279,21 @@ export default function DashboardOverview() {
         }
       } catch {}
 
-      // Fetch Kalshi balance
-      try {
-        const kalshiResp = await fetch("/api/kalshi?action=balance");
-        if (kalshiResp.ok) {
-          const kd = await kalshiResp.json();
-          if (!kd.error) setKalshiBalance(kd);
-        }
-      } catch {}
+      // Fetch Kalshi data from Supabase (synced by bot on NUC)
+      const { data: kalshiRow } = await supabase
+        .from("bot_config")
+        .select("value")
+        .eq("key", "kalshi_snapshot")
+        .single();
+      if (kalshiRow?.value) {
+        const kd = kalshiRow.value as Record<string, unknown>;
+        setKalshiBalance({
+          balance_dollars: (kd.balance_dollars as number) ?? 0,
+          portfolio_value_dollars: (kd.portfolio_value_dollars as number) ?? 0,
+        });
+        setKalshiPnl((kd.total_pnl as number) ?? 0);
+        setKalshiWinRate((kd.win_rate as number) ?? 0);
+      }
     }
 
     load();
@@ -358,11 +367,16 @@ export default function DashboardOverview() {
             <p className="text-[2.5rem] font-semibold tracking-[-0.03em] leading-none animate-count font-mono">
               {fmtCurrency(snapshot?.total_value ?? null)}
             </p>
-            <div className="mt-2 flex items-center gap-4">
+            <div className="mt-2 flex items-center gap-4 flex-wrap">
               <span
                 className={`text-sm font-mono font-medium ${(snapshot?.daily_pnl ?? 0) >= 0 ? "text-profit" : "text-loss"}`}
               >
                 {fmtCurrency(snapshot?.daily_pnl ?? null)} today
+                {snapshot?.daily_pnl != null && snapshot?.total_value ? (
+                  <span className="text-xs ml-1">
+                    ({fmtPct((snapshot.daily_pnl / (snapshot.total_value - snapshot.daily_pnl)) * 100)})
+                  </span>
+                ) : null}
               </span>
               <span className="text-[oklch(0.80_0.01_250)]">|</span>
               <span
@@ -370,6 +384,14 @@ export default function DashboardOverview() {
               >
                 {fmtCurrency(totalPnl)} unrealized
               </span>
+              {kalshiPnl !== 0 && (
+                <>
+                  <span className="text-[oklch(0.80_0.01_250)]">|</span>
+                  <span className={`text-sm font-mono font-medium ${kalshiPnl >= 0 ? "text-profit" : "text-loss"}`}>
+                    Kalshi {kalshiPnl >= 0 ? "+" : ""}${kalshiPnl.toFixed(2)}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -461,12 +483,16 @@ export default function DashboardOverview() {
                 <p className="text-lg font-mono font-bold">{kalshiBalance ? `$${kalshiBalance.balance_dollars.toFixed(2)}` : "—"}</p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase">Portfolio</p>
-                <p className="text-lg font-mono font-bold text-gold">{kalshiBalance ? `$${kalshiBalance.portfolio_value_dollars.toFixed(2)}` : "—"}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Net P&L</p>
+                <p className={`text-lg font-mono font-bold ${kalshiPnl >= 0 ? "text-profit" : "text-loss"}`}>
+                  {kalshiPnl !== 0 ? `${kalshiPnl >= 0 ? "+" : ""}$${kalshiPnl.toFixed(2)}` : "—"}
+                </p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase">Trades</p>
-                <p className="text-lg font-mono font-bold">{recentTrades.length}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Win Rate</p>
+                <p className={`text-lg font-mono font-bold ${kalshiWinRate >= 50 ? "text-profit" : kalshiWinRate > 0 ? "text-loss" : ""}`}>
+                  {kalshiWinRate > 0 ? `${kalshiWinRate}%` : "—"}
+                </p>
               </div>
             </div>
           </CardContent>

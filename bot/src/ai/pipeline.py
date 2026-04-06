@@ -293,6 +293,17 @@ class AIPipeline:
             if existing.data:
                 continue
 
+            # Quick Haiku screen — skip low-value congressional trades (saves ~80% Sonnet cost)
+            import json as _json
+            quick_screen = await self.analyst._call(
+                f"Is this congressional trade worth deep analysis? Reply JSON: {{\"worth_analyzing\":true/false,\"reason\":\"brief\"}}\n{_json.dumps(trade)}",
+                model="claude-haiku-4-5-20251001",
+                max_tokens=128,
+            )
+            if not quick_screen.get("worth_analyzing", True):
+                logger.info("CONGRESSIONAL SKIP %s by %s — Haiku: %s", ticker, name, quick_screen.get("reason", ""))
+                continue
+
             # Get current flow data for this ticker
             current_flow = []
             try:
@@ -300,10 +311,10 @@ class AIPipeline:
             except Exception:
                 pass
 
-            # Sonnet analysis (congressional trades go straight to deep analysis)
+            # Sonnet deep analysis (only for trades that passed Haiku screen)
             analysis = await self.analyst.analyze_congressional_trade(
                 trade_data=trade,
-                current_flow=current_flow[:5],  # limit to 5 most recent
+                current_flow=current_flow[:5],
             )
 
             if analysis.get("error"):

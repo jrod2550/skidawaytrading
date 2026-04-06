@@ -74,23 +74,24 @@ export default function PositionsPage() {
     };
   }, []);
 
-  // Fetch Kalshi positions and balance
+  // Fetch Kalshi data from Supabase (synced by bot on NUC)
   useEffect(() => {
     async function loadKalshi() {
       try {
-        const [balResp, posResp] = await Promise.all([
-          fetch("/api/kalshi?action=balance"),
-          fetch("/api/kalshi?action=positions"),
-        ]);
-        if (balResp.ok) {
-          const data = await balResp.json();
-          if (!data.error) setKalshiBalance(data);
+        const { data: configRow } = await supabase
+          .from("bot_config")
+          .select("value")
+          .eq("key", "kalshi_snapshot")
+          .single();
+        if (configRow?.value) {
+          const kd = configRow.value as Record<string, unknown>;
+          setKalshiBalance({
+            balance_dollars: (kd.balance_dollars as number) ?? 0,
+            portfolio_value_dollars: (kd.portfolio_value_dollars as number) ?? 0,
+          });
+          setKalshiPositions((kd.positions as KalshiPosition[]) ?? []);
         }
-        if (posResp.ok) {
-          const data = await posResp.json();
-          if (!data.error) setKalshiPositions(data.positions ?? []);
-        }
-      } catch { /* Kalshi API may not be configured */ }
+      } catch { /* */ }
       setKalshiLoading(false);
     }
     loadKalshi();
