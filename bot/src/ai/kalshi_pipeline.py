@@ -40,9 +40,14 @@ YOU HAVE TWO UNIQUE EDGES:
 
 MARKET CATEGORIES TO ANALYZE:
 
-CRYPTO (15-min, hourly, daily):
-- BTC/ETH price predictions. Use momentum, options flow on crypto ETFs (BITO, ETHE), and market tide.
-- Fast-expiring markets reward conviction and timing.
+CRYPTO (15-min, hourly, daily) — PRIORITY CATEGORY:
+- You receive REAL-TIME BTC data: current price, 15-min candles, 1-hour momentum, volume ratio, fear/greed index.
+- For 15-min BTC markets: if BTC is trending up with volume ratio > 1.2, the "above X" markets are likely underpriced. Bet YES.
+- If BTC is trending down with volume ratio > 1.2, "below X" is underpriced. Bet YES on the downside.
+- Sideways with low volume = skip or bet small.
+- ALWAYS allocate at least $5 to BTC 15-min markets when you see any edge.
+- Cross-reference with crypto ETF options flow (BITO, ETHE) from UW data.
+- Fear/Greed index: extreme fear (< 25) often precedes bounces. Extreme greed (> 75) often precedes dips.
 
 ECONOMICS & FED:
 - CPI, PPI, jobs, GDP, Fed rate decisions.
@@ -101,6 +106,10 @@ Upcoming Economic Events: {econ_calendar}
 
 REAL-TIME WEATHER DATA (for weather/climate markets):
 {weather_data}
+
+REAL-TIME BTC DATA (for crypto prediction markets):
+{btc_data}
+(IMPORTANT: For ANY BTC 15-min price market, use the momentum data above. If BTC is trending up with strong volume, "above X" markets are underpriced. If trending down, "below X" markets are underpriced. Always bet at least $5 on BTC 15-min markets when you see an edge.)
 
 IBKR SIGNAL INTELLIGENCE (recent signals from our options bot):
 {ibkr_signals}
@@ -312,9 +321,11 @@ class KalshiPipeline:
         import asyncio
         from src.market_data.unusual_whales import UnusualWhalesClient
         from src.market_data.weather import WeatherClient
+        from src.market_data.crypto import CryptoClient
 
         uw = UnusualWhalesClient()
         weather = WeatherClient()
+        crypto = CryptoClient()
 
         async def fetch_tide():
             try:
@@ -342,13 +353,21 @@ class KalshiPipeline:
             except Exception:
                 return {}
 
-        results = await asyncio.gather(fetch_tide(), fetch_flow(), fetch_econ(), fetch_weather())
+        async def fetch_btc():
+            try:
+                return await crypto.get_btc_analysis()
+            except Exception:
+                return {}
+
+        results = await asyncio.gather(fetch_tide(), fetch_flow(), fetch_econ(), fetch_weather(), fetch_btc())
         market_tide = results[0]
         top_flow = results[1]
         econ_calendar = results[2]
         weather_data = results[3]
+        btc_data = results[4]
         await uw.close()
         await weather.close()
+        await crypto.close()
 
         # Get IBKR signals for cross-reference
         ibkr_signals = self._get_ibkr_signals()
@@ -365,6 +384,7 @@ class KalshiPipeline:
             top_flow=json.dumps(top_flow, indent=2),
             econ_calendar=json.dumps(econ_calendar, indent=2),
             weather_data=json.dumps(weather_data, indent=2) if weather_data else "No weather data available.",
+            btc_data=json.dumps(btc_data, indent=2) if btc_data else "No BTC data available.",
             ibkr_signals=json.dumps(ibkr_signals, indent=2) if ibkr_signals else "No IBKR signals today yet.",
         )
 
