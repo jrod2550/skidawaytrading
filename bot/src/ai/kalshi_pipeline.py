@@ -525,12 +525,14 @@ class KalshiPipeline:
             contracts = max(min_contracts, min(rec.get("contracts", 3), max_contracts))
 
             try:
+                # Use fill_or_kill for instant execution — no resting orders
                 order = await self.kalshi.place_order(
                     ticker=ticker,
                     side=side,
                     action="buy",
                     count=contracts,
                     price_cents=price,
+                    time_in_force="fill_or_kill",
                 )
 
                 self._log_activity(
