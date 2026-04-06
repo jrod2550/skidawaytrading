@@ -227,6 +227,7 @@ export default function DashboardOverview() {
   const [pendingSignals, setPendingSignals] = useState<Signal[]>([]);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [market, setMarket] = useState<MarketData | null>(null);
+  const [kalshiBalance, setKalshiBalance] = useState<{ balance_dollars: number; portfolio_value_dollars: number } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -274,9 +275,16 @@ export default function DashboardOverview() {
           const marketData = await marketResp.json();
           setMarket(marketData);
         }
-      } catch {
-        // API route may fail silently
-      }
+      } catch {}
+
+      // Fetch Kalshi balance
+      try {
+        const kalshiResp = await fetch("/api/kalshi?action=balance");
+        if (kalshiResp.ok) {
+          const kd = await kalshiResp.json();
+          if (!kd.error) setKalshiBalance(kd);
+        }
+      } catch {}
     }
 
     load();
@@ -400,6 +408,69 @@ export default function DashboardOverview() {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Dual Platform Status */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* IBKR */}
+        <Card className="bg-card border-border border-l-4 border-l-profit">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[oklch(0.50_0.20_155_/_0.08)] border border-[oklch(0.50_0.20_155_/_0.15)] flex items-center justify-center text-xs font-bold text-profit">IB</div>
+                <div>
+                  <p className="text-sm font-semibold">IBKR Paper Trading</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">Options + Equities</p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[9px] border-profit text-profit">PAPER</Badge>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Pool Value</p>
+                <p className="text-lg font-mono font-bold">{fmtCurrency(snapshot?.total_value ?? null)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Unrealized</p>
+                <p className={`text-lg font-mono font-bold ${totalPnl >= 0 ? "text-profit" : "text-loss"}`}>{fmtCurrency(totalPnl)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Positions</p>
+                <p className="text-lg font-mono font-bold">{positions.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Kalshi */}
+        <Card className="bg-card border-border border-l-4 border-l-gold">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[oklch(0.65_0.16_85_/_0.08)] border border-[oklch(0.65_0.16_85_/_0.15)] flex items-center justify-center text-xs font-bold text-gold">K</div>
+                <div>
+                  <p className="text-sm font-semibold">Kalshi Predictions</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">All categories</p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[9px] border-gold text-gold">LIVE</Badge>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Balance</p>
+                <p className="text-lg font-mono font-bold">{kalshiBalance ? `$${kalshiBalance.balance_dollars.toFixed(2)}` : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Portfolio</p>
+                <p className="text-lg font-mono font-bold text-gold">{kalshiBalance ? `$${kalshiBalance.portfolio_value_dollars.toFixed(2)}` : "—"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Trades</p>
+                <p className="text-lg font-mono font-bold">{recentTrades.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Three-column grid */}
