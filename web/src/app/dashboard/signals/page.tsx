@@ -189,13 +189,13 @@ export default function SignalsPage() {
         },
         suggested_action: "BUY STOCK",
         suggested_quantity: 5,
-      }).execute();
+      });
 
       // Also update bot_mode to semi_auto if it's still manual_review
       await supabase.from("bot_config").upsert({
         key: "bot_mode",
         value: "semi_auto",
-      }).execute();
+      });
     } catch (e) {
       console.error("Failed to create test trade:", e);
     }
