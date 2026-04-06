@@ -140,7 +140,7 @@ export default function StrategyPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Strategy & Risk</h2>
           <p className="text-muted-foreground">
-            Control how the AI trades — risk limits, confidence thresholds, and execution mode
+            How the agents work and risk controls
           </p>
         </div>
         {isAdmin && (
@@ -153,6 +153,94 @@ export default function StrategyPage() {
           </Button>
         )}
       </div>
+
+      {/* Agent Explainer */}
+      <Card className="bg-card border-border border-l-4 border-l-gold">
+        <CardContent className="p-6 space-y-5">
+          <div>
+            <h3 className="text-lg font-bold mb-1">How the Agents Work</h3>
+            <p className="text-xs text-muted-foreground">Our AI trading system runs 24/7 on a dedicated NUC server</p>
+          </div>
+
+          {/* BTC 15-min Agent */}
+          <div className="rounded-lg bg-muted p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs border-gold text-gold">ACTIVE</Badge>
+              <h4 className="text-sm font-bold">BTC 15-Minute Agent</h4>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Every 5 minutes, this agent checks Kalshi for BTC 15-minute prediction markets
+              ("Will BTC go up in the next 15 min?"). It gathers institutional-grade data that
+              most Kalshi traders don't have:
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded bg-card border border-border p-2">
+                <p className="font-semibold text-gold">Binance Candles</p>
+                <p className="text-muted-foreground">20 fifteen-minute candles — momentum, volume trends, candle patterns</p>
+              </div>
+              <div className="rounded bg-card border border-border p-2">
+                <p className="font-semibold text-gold">Order Book Depth</p>
+                <p className="text-muted-foreground">Bid/ask walls, buy/sell pressure ratio, spread analysis</p>
+              </div>
+              <div className="rounded bg-card border border-border p-2">
+                <p className="font-semibold text-gold">Crypto ETF Flow (UW)</p>
+                <p className="text-muted-foreground">IBIT, BITO, MARA, RIOT, COIN options flow — institutional positioning</p>
+              </div>
+              <div className="rounded bg-card border border-border p-2">
+                <p className="font-semibold text-gold">Fear & Greed Index</p>
+                <p className="text-muted-foreground">Contrarian signal — extreme fear often precedes bounces</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Claude Haiku analyzes all data and makes a YES/NO call. $10 per bet, fill-or-kill execution.
+              The agent won't bet the same 15-min window twice.
+            </p>
+          </div>
+
+          {/* Kalshi Scanner */}
+          <div className="rounded-lg bg-muted p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs border-teal text-teal">ACTIVE</Badge>
+              <h4 className="text-sm font-bold">Kalshi Market Scanner</h4>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Every 30 minutes, scans all Kalshi prediction markets (economics, politics, sports,
+              weather, culture) and cross-references with Unusual Whales options flow data to find
+              mispricings. Claude Sonnet analyzes the top 25 liquid markets and recommends trades
+              where the AI-estimated probability differs from the market price by 8%+.
+              BTC 15-min markets are excluded (dedicated agent handles those).
+            </p>
+          </div>
+
+          {/* IBKR */}
+          <div className="rounded-lg bg-muted p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs border-muted-foreground text-muted-foreground">PAUSED</Badge>
+              <h4 className="text-sm font-bold">IBKR Options & Equities</h4>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              When active: scans Unusual Whales options flow every minute with Claude Haiku.
+              Promising signals (score 50+) escalate to Claude Sonnet for deep analysis with
+              dark pool data, GEX, IV rank, and congressional trades. Approved signals execute
+              on IBKR paper trading. Currently paused to focus on Kalshi BTC.
+            </p>
+          </div>
+
+          {/* Architecture */}
+          <div className="rounded-lg border border-border p-4">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">System Architecture</h4>
+            <div className="text-xs font-mono text-muted-foreground space-y-1">
+              <p>NUC Server (192.168.1.159) — Ubuntu 24.04, always-on</p>
+              <p>IB Gateway — port 4002, paper trading account</p>
+              <p>Kalshi API — production, RSA-PSS signed requests</p>
+              <p>Claude Haiku — fast screening ($0.001/call)</p>
+              <p>Claude Sonnet — deep analysis ($0.03/call)</p>
+              <p>Supabase — real-time data sync to web dashboard</p>
+              <p>Vercel — Next.js frontend, auto-deploys from GitHub</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Risk Profile Presets */}
       <Card className="bg-card border-border">

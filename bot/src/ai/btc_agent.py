@@ -1,11 +1,11 @@
-"""Dedicated BTC 15-min Agent — runs independently from the main Kalshi scanner.
+"""Hardcore BTC 15-min Agent — the moneymaker.
 
 This agent:
-1. Runs every 2 minutes (catches every 15-min window)
-2. Fetches real-time BTC price data from Binance (15-min candles)
-3. Checks Kalshi for open BTC 15-min markets
-4. Analyzes with Claude Sonnet using momentum, volume, fear/greed
-5. Auto-executes $5 bets on every window where it sees any edge
+1. Runs every 5 minutes
+2. Pulls EVERYTHING: Binance candles, order book depth, funding rates,
+   CoinGecko price, fear/greed, AND crypto ETF options flow from UW
+3. Claude Haiku makes the call with institutional-grade data
+4. $10 bets, fill-or-kill
 """
 
 import json
@@ -16,72 +16,87 @@ from src.ai.analyst import HAIKU, SONNET
 from src.broker.kalshi import KalshiClient
 from src.db.supabase_client import get_supabase
 from src.market_data.crypto import CryptoClient
+from src.market_data.unusual_whales import UnusualWhalesClient
 
 logger = logging.getLogger(__name__)
 
-BTC_SYSTEM_PROMPT = """You are a crypto momentum trader at Booyah Trading.
-You specialize in Bitcoin 15-minute price prediction markets on Kalshi.
+BTC_SYSTEM_PROMPT = """You are an elite crypto momentum trader. You ONLY trade Bitcoin 15-minute prediction markets on Kalshi.
 
-YOU HAVE REAL-TIME DATA:
-- Current BTC price from CoinGecko
-- Last 20 fifteen-minute candles from Binance (5 hours of price action)
-- 1-hour momentum trend and volume ratio
-- Fear & Greed index
+YOUR EDGE: You have data nobody else on Kalshi has:
+1. REAL-TIME 15-min candles from Binance (open, high, low, close, volume)
+2. Binance order book depth (bid/ask walls — where is the liquidity?)
+3. Crypto ETF institutional flow from Unusual Whales (IBIT, BITO, MARA, RIOT, COIN options)
+4. Fear & Greed index
+5. Funding rates and liquidation data
 
-YOUR STRATEGY:
-1. MOMENTUM: If BTC moved up >0.1% in the last hour with volume ratio >1.0, favor UP.
-   If down >0.1% with volume ratio >1.0, favor DOWN. Sideways = coin flip, still bet but lower confidence.
+YOUR STRATEGY — BE DECISIVE:
 
-2. VOLUME: Rising volume confirms the trend. Falling volume = trend exhaustion, potential reversal.
+MOMENTUM RULES (most important):
+- 3+ green 15-min candles with rising volume = STRONG UP, bet YES aggressively
+- 3+ red 15-min candles with rising volume = STRONG DOWN, bet NO aggressively
+- Volume ratio > 1.5 = trend is accelerating, GO WITH IT
+- Volume ratio < 0.5 = trend exhaustion, potential reversal
 
-3. CANDLE PATTERNS: Look at the last 4 candles:
-   - 3+ green candles in a row = strong momentum up
-   - 3+ red candles = strong momentum down
-   - Doji/small candles = indecision, lower confidence
+ORDER BOOK:
+- Large bid wall below current price = support, favors UP
+- Large ask wall above current price = resistance, favors DOWN
+- Thin book = volatile, go with momentum
+- If momentum is UP and there's a big ask wall within 0.1%, the move may stall — reduce confidence
 
-4. FEAR/GREED: Extreme fear (<25) = contrarian buy signal. Extreme greed (>75) = contrarian sell signal.
-   Neutral (40-60) = follow the momentum.
+INSTITUTIONAL FLOW (from Unusual Whales):
+- Massive IBIT call buying = institutions expect BTC UP
+- IBIT put buying or BITO put buying = institutions hedging, expect DOWN
+- MARA/RIOT call sweeps = miners bullish = BTC UP
+- Dark pool prints on crypto ETFs = smart money positioning
 
-5. PRICE LEVEL: If BTC is near a round number ($70k, $75k), it often bounces or breaks through with conviction.
+FEAR/GREED:
+- Extreme fear (<20) = contrarian BUY signal (short-term bounces likely)
+- Extreme greed (>80) = contrarian SELL signal
+- Neutral = follow momentum
 
-ALWAYS BET. Every 15-min window, you MUST make a recommendation. $5 minimum.
-If momentum is clear, bet with conviction. If uncertain, still bet but lean toward the dominant trend.
+CRITICAL RULES:
+1. ALWAYS make a call. Every window. No skipping.
+2. Go with momentum unless you have strong contrarian signal
+3. If uncertain, bet SMALL but still bet
+4. Cite specific data points — "volume ratio 1.8, 4 green candles, IBIT calls $2M"
 
 Respond in valid JSON only."""
 
-BTC_ANALYSIS_PROMPT = """Analyze the current BTC 15-minute prediction market.
-
-KALSHI MARKET:
+BTC_ANALYSIS_PROMPT = """KALSHI MARKET:
 Ticker: {ticker}
 Title: {title}
-YES price (UP): {yes_price}¢
-NO price (DOWN): {no_price}¢
-Volume: ${volume}
-Closes: {close_time}
+YES price: {yes_price}¢ | NO price: {no_price}¢
+Volume: ${volume} | Closes: {close_time}
 
-REAL-TIME BTC DATA:
+BINANCE BTC DATA:
 {btc_data}
 
-Make your call. Respond in JSON:
+ORDER BOOK DEPTH:
+{orderbook_data}
+
+CRYPTO ETF INSTITUTIONAL FLOW (Unusual Whales):
+{crypto_flow}
+
+Your call. JSON response:
 {{
   "direction": "UP" or "DOWN",
   "side": "yes" or "no",
   "confidence": 50-100,
-  "edge_pct": your estimated edge,
-  "reasoning": "2-3 sentences explaining your momentum read, citing specific candle data and volume",
-  "bet_amount_dollars": 5
+  "edge_pct": estimated edge over market price,
+  "reasoning": "2-3 sentences citing SPECIFIC data: candle count, volume ratio, order book walls, ETF flow premiums"
 }}"""
 
 
 class BTCAgent:
-    """Dedicated BTC 15-min prediction market trader."""
+    """Hardcore BTC 15-min prediction market trader."""
 
     def __init__(self, kalshi: KalshiClient, analyst_client) -> None:
         self.kalshi = kalshi
-        self.analyst_client = analyst_client  # httpx client from ClaudeAnalyst
+        self.analyst_client = analyst_client
         self.db = get_supabase()
         self.crypto = CryptoClient()
-        self._last_traded_ticker = None  # Don't bet same window twice
+        self.uw = UnusualWhalesClient()
+        self._last_traded_ticker = None
 
     def _log(self, event_type: str, ticker: str | None, details: dict, reasoning: str | None = None, confidence: float | None = None):
         try:
@@ -95,15 +110,96 @@ class BTCAgent:
         except Exception:
             pass
 
+    async def _get_crypto_flow(self) -> dict:
+        """Get institutional crypto ETF flow from Unusual Whales."""
+        import asyncio
+        results = {}
+
+        async def fetch_flow(ticker):
+            try:
+                flow = await self.uw.get_flow_alerts(ticker)
+                if flow:
+                    # Summarize: total premium, direction, sweeps
+                    total_premium = sum(float(f.get("total_premium", 0)) for f in flow[:10])
+                    calls = [f for f in flow[:10] if f.get("type") == "call"]
+                    puts = [f for f in flow[:10] if f.get("type") == "put"]
+                    sweeps = [f for f in flow[:10] if f.get("has_sweep")]
+                    return {
+                        "ticker": ticker,
+                        "total_premium": total_premium,
+                        "call_count": len(calls),
+                        "put_count": len(puts),
+                        "sweep_count": len(sweeps),
+                        "call_premium": sum(float(f.get("total_premium", 0)) for f in calls),
+                        "put_premium": sum(float(f.get("total_premium", 0)) for f in puts),
+                        "sentiment": "bullish" if len(calls) > len(puts) * 1.5 else "bearish" if len(puts) > len(calls) * 1.5 else "neutral",
+                        "top_trade": f"{flow[0].get('type','?')} {flow[0].get('strike','')} exp {flow[0].get('expiry','')} ${float(flow[0].get('total_premium',0)):,.0f}" if flow else None,
+                    }
+            except Exception:
+                pass
+            return None
+
+        tasks = [fetch_flow(t) for t in ["IBIT", "BITO", "MARA", "RIOT", "COIN"]]
+        fetched = await asyncio.gather(*tasks)
+        for r in fetched:
+            if r:
+                results[r["ticker"]] = r
+
+        # Overall sentiment
+        total_call_prem = sum(r.get("call_premium", 0) for r in results.values())
+        total_put_prem = sum(r.get("put_premium", 0) for r in results.values())
+        results["_summary"] = {
+            "total_call_premium": total_call_prem,
+            "total_put_premium": total_put_prem,
+            "institutional_sentiment": "BULLISH" if total_call_prem > total_put_prem * 1.5 else "BEARISH" if total_put_prem > total_call_prem * 1.5 else "NEUTRAL",
+        }
+        return results
+
+    async def _get_orderbook_depth(self) -> dict:
+        """Get Binance BTC order book depth."""
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(
+                    "https://api.binance.com/api/v3/depth",
+                    params={"symbol": "BTCUSDT", "limit": 20},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    bids = [(float(p), float(q)) for p, q in data.get("bids", [])]
+                    asks = [(float(p), float(q)) for p, q in data.get("asks", [])]
+                    bid_volume = sum(q for _, q in bids)
+                    ask_volume = sum(q for _, q in asks)
+                    best_bid = bids[0][0] if bids else 0
+                    best_ask = asks[0][0] if asks else 0
+                    # Find walls (single level > 2x average)
+                    avg_bid = bid_volume / len(bids) if bids else 0
+                    avg_ask = ask_volume / len(asks) if asks else 0
+                    bid_walls = [{"price": p, "btc": q} for p, q in bids if q > avg_bid * 2]
+                    ask_walls = [{"price": p, "btc": q} for p, q in asks if q > avg_ask * 2]
+                    return {
+                        "best_bid": best_bid,
+                        "best_ask": best_ask,
+                        "spread": round(best_ask - best_bid, 2),
+                        "bid_depth_btc": round(bid_volume, 2),
+                        "ask_depth_btc": round(ask_volume, 2),
+                        "bid_ask_ratio": round(bid_volume / ask_volume, 2) if ask_volume > 0 else 1,
+                        "bid_walls": bid_walls[:3],
+                        "ask_walls": ask_walls[:3],
+                        "pressure": "BUY" if bid_volume > ask_volume * 1.3 else "SELL" if ask_volume > bid_volume * 1.3 else "BALANCED",
+                    }
+        except Exception:
+            pass
+        return {}
+
     async def run(self) -> bool:
-        """Check for BTC 15-min market and trade it. Returns True if traded."""
-        logger.info("BTC Agent: scanning for 15-min market...")
+        """Check for BTC 15-min market and trade it."""
+        logger.info("BTC Agent: scanning...")
 
         # Check if paused
         try:
             paused = self.db.table("bot_config").select("value").eq("key", "bot_paused").execute()
             if paused.data and paused.data[0].get("value"):
-                logger.info("BTC Agent: bot is paused")
                 return False
         except Exception:
             pass
@@ -124,11 +220,9 @@ class BTCAgent:
             logger.info("BTC Agent: no open BTC 15-min markets")
             return False
 
-        # Pick the soonest expiring market
         market = markets[0]
         ticker = market.get("ticker", "")
 
-        # Don't bet same window twice
         if ticker == self._last_traded_ticker:
             logger.info("BTC Agent: already traded this window (%s)", ticker)
             return False
@@ -144,13 +238,15 @@ class BTCAgent:
             logger.info("BTC Agent: no pricing on %s", ticker)
             return False
 
-        # Get real-time BTC data
-        try:
-            btc_data = await self.crypto.get_btc_analysis()
-        except Exception:
-            btc_data = {}
+        # Gather ALL intelligence in parallel
+        import asyncio
+        btc_data, orderbook, crypto_flow = await asyncio.gather(
+            self.crypto.get_btc_analysis(),
+            self._get_orderbook_depth(),
+            self._get_crypto_flow(),
+        )
 
-        # Claude analyzes
+        # Build prompt
         prompt = BTC_ANALYSIS_PROMPT.format(
             ticker=ticker,
             title=title,
@@ -159,12 +255,13 @@ class BTCAgent:
             volume=f"{volume:.0f}",
             close_time=market.get("close_time", ""),
             btc_data=json.dumps(btc_data, indent=2),
+            orderbook_data=json.dumps(orderbook, indent=2),
+            crypto_flow=json.dumps(crypto_flow, indent=2),
         )
 
         try:
             MODELS = [HAIKU, SONNET, "claude-3-haiku-20240307"]
             resp_data = None
-
             for model in MODELS:
                 try:
                     resp = await self.analyst_client.post(
@@ -207,7 +304,7 @@ class BTCAgent:
         reasoning = analysis.get("reasoning", "")
         edge = analysis.get("edge_pct", 0)
 
-        # Calculate contracts for $5 bet
+        # $10 bet
         if side == "yes":
             price_cents = round(yes_ask * 100) if yes_ask > 0 else round(yes_bid * 100)
         else:
@@ -216,13 +313,13 @@ class BTCAgent:
         if price_cents <= 0:
             price_cents = 50
 
-        contracts = max(1, round(2000 / price_cents))  # $20 worth
+        contracts = max(1, round(1000 / price_cents))  # $10 worth
 
         bet_desc = f"BTC 15-min: {direction} — {'YES' if side == 'yes' else 'NO'} {contracts}x @ {price_cents}¢ = ${contracts * price_cents / 100:.2f}"
+        logger.info("BTC Agent: %s (conf=%d, edge=%.1f%%)", bet_desc, confidence, edge)
 
-        logger.info("BTC Agent: %s (confidence=%d, edge=%.1f%%)", bet_desc, confidence, edge)
-
-        # Log the suggestion
+        # Log with institutional flow data
+        flow_summary = crypto_flow.get("_summary", {})
         self._log(
             "signal_created",
             ticker=ticker,
@@ -239,13 +336,16 @@ class BTCAgent:
                 "edge_pct": edge,
                 "btc_price": btc_data.get("current_price"),
                 "momentum": btc_data.get("momentum", {}).get("trend"),
+                "volume_ratio": btc_data.get("momentum", {}).get("volume_ratio"),
+                "orderbook_pressure": orderbook.get("pressure"),
+                "institutional_sentiment": flow_summary.get("institutional_sentiment"),
                 "category": "crypto",
             },
             reasoning=reasoning,
             confidence=confidence,
         )
 
-        # Execute the trade
+        # Execute
         try:
             order = await self.kalshi.place_order(
                 ticker=ticker,
@@ -276,6 +376,8 @@ class BTCAgent:
                     "edge_pct": edge,
                     "btc_price": btc_data.get("current_price"),
                     "momentum": btc_data.get("momentum", {}).get("trend"),
+                    "orderbook_pressure": orderbook.get("pressure"),
+                    "institutional_sentiment": flow_summary.get("institutional_sentiment"),
                     "category": "crypto",
                     "order_id": order.get("order_id"),
                 },
@@ -288,13 +390,9 @@ class BTCAgent:
 
         except Exception as e:
             logger.error("BTC Agent: trade failed: %s", e)
-            self._log(
-                "trade_failed",
-                ticker=ticker,
-                details={"error": str(e), "agent": "btc_15min", "bet": bet_desc},
-                reasoning=reasoning,
-            )
+            self._log("trade_failed", ticker=ticker, details={"error": str(e), "agent": "btc_15min", "bet": bet_desc}, reasoning=reasoning)
             return False
 
     async def close(self):
         await self.crypto.close()
+        await self.uw.close()

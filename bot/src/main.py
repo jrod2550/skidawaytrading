@@ -109,7 +109,7 @@ async def main() -> None:
             misfire_grace_time=120,
         )
 
-    # ── BTC 15-min Agent — every 2 minutes (profitable, keep aggressive) ──
+    # ── BTC 15-min Agent — every 5 minutes, $10/bet ──
     btc_agent = None
     if settings.kalshi_api_key:
         from src.ai.btc_agent import BTCAgent
@@ -117,12 +117,12 @@ async def main() -> None:
         scheduler.add_job(
             btc_agent.run,
             "interval",
-            minutes=2,
+            minutes=5,
             id="btc_15min_agent",
             max_instances=1,
-            misfire_grace_time=30,
+            misfire_grace_time=60,
         )
-        logger.info("BTC 15-min Agent enabled — $10/bet every 2 min")
+        logger.info("BTC 15-min Agent enabled — $10/bet every 5 min (hardcore mode)")
 
     # ── Kalshi -> Supabase sync — every 5 minutes (so web app can display) ──
     if kalshi_pipeline:
@@ -185,7 +185,7 @@ async def main() -> None:
     logger.info("")
     logger.info("Bot is running. Ctrl+C to stop.")
     logger.info("MODE: Kalshi BTC 15-min ONLY — IBKR paused")
-    logger.info("BTC Agent: every 2 min, $20/bet")
+    logger.info("BTC Agent: every 5 min, $10/bet (hardcore + UW flow + order book)")
     logger.info("Kalshi Scan: every 30 min (non-BTC markets)")
 
     try:
