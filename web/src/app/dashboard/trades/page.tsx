@@ -107,9 +107,8 @@ export default function TradesPage() {
 
   const kalshiExposure = kalshiPositions.reduce((s, p) => s + p.exposure_dollars, 0);
 
-  // BTC-specific stats
+  // BTC-specific stats (settlement-based W/L record, but NOT used for P&L — P&L is balance-based)
   const btcSettlements = kalshiSettlements.filter((s) => s.ticker.includes("BTC15M") || s.ticker.includes("KXBTC15M"));
-  const btcPnl = btcSettlements.reduce((s, x) => s + x.profit_dollars, 0);
   const btcWins = btcSettlements.filter((s) => s.outcome === "WON").length;
   const btcLosses = btcSettlements.filter((s) => s.outcome === "LOST").length;
   const btcConflicts = btcSettlements.filter((s) => s.had_conflict).length;
@@ -129,8 +128,11 @@ export default function TradesPage() {
             <h3 className="text-sm font-bold tracking-wide uppercase">Kalshi Account</h3>
           </div>
           <div className="text-right">
-            <p className="text-[9px] uppercase text-muted-foreground">Balance</p>
-            <p className="text-2xl font-bold font-mono">{kalshiBalance != null ? `$${kalshiBalance.toFixed(2)}` : "--"}</p>
+            <p className="text-[9px] uppercase text-muted-foreground">Total Value</p>
+            <p className="text-2xl font-bold font-mono">{kalshiBalance != null ? `$${(kalshiBalance + kalshiExposure).toFixed(2)}` : "--"}</p>
+            {kalshiBalance != null && kalshiExposure > 0 && (
+              <p className="text-[9px] text-muted-foreground font-mono">${kalshiBalance.toFixed(2)} cash + ${kalshiExposure.toFixed(2)} open</p>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
@@ -179,8 +181,8 @@ export default function TradesPage() {
               BTC 15-min Agent
               <Badge variant="outline" className="text-[9px] border-gold text-gold">crypto</Badge>
             </h3>
-            <p className={`text-xl font-bold font-mono ${btcPnl >= 0 ? "text-profit" : "text-loss"}`}>
-              {btcPnl >= 0 ? "+" : ""}${btcPnl.toFixed(2)}
+            <p className="text-sm font-mono text-muted-foreground">
+              {btcSettlements.length} windows traded
             </p>
           </div>
           <div className="grid grid-cols-4 gap-3 mb-4">
