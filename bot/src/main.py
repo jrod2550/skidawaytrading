@@ -72,31 +72,31 @@ async def main() -> None:
     # Set up scheduler
     scheduler = AsyncIOScheduler()
 
-    # ── IBKR PAUSED — Flow scan and congressional scan disabled ──
-    # Uncomment to re-enable IBKR options/equity trading:
-    # scheduler.add_job(
-    #     ai_pipeline.run_flow_scan,
-    #     "cron",
-    #     day_of_week="mon-fri",
-    #     hour="9-16",
-    #     minute="*",
-    #     timezone="US/Eastern",
-    #     id="ai_flow_scan",
-    #     max_instances=1,
-    #     misfire_grace_time=30,
-    # )
-    # scheduler.add_job(
-    #     ai_pipeline.run_congressional_scan,
-    #     "cron",
-    #     day_of_week="mon-fri",
-    #     hour="9-16",
-    #     minute="*/15",
-    #     timezone="US/Eastern",
-    #     id="ai_congressional_scan",
-    #     max_instances=1,
-    #     misfire_grace_time=60,
-    # )
-    logger.info("IBKR flow/congressional scans PAUSED — focus on Kalshi BTC")
+    # ── IBKR Flow Scan — every minute during market hours ──
+    scheduler.add_job(
+        ai_pipeline.run_flow_scan,
+        "cron",
+        day_of_week="mon-fri",
+        hour="9-16",
+        minute="*",
+        timezone="US/Eastern",
+        id="ai_flow_scan",
+        max_instances=1,
+        misfire_grace_time=30,
+    )
+    # ── IBKR Congressional Scan — every 15 min during market hours ──
+    scheduler.add_job(
+        ai_pipeline.run_congressional_scan,
+        "cron",
+        day_of_week="mon-fri",
+        hour="9-16",
+        minute="*/15",
+        timezone="US/Eastern",
+        id="ai_congressional_scan",
+        max_instances=1,
+        misfire_grace_time=60,
+    )
+    logger.info("IBKR flow + congressional scans ENABLED (paper mode)")
 
     # ── Kalshi Prediction Market Scan — every 30 minutes (saves ~$7/day vs 5-min) ──
     if kalshi_pipeline:
@@ -145,16 +145,16 @@ async def main() -> None:
         id="expire_signals",
     )
 
-    # ── IBKR PAUSED — Position sync and signal execution disabled ──
-    # scheduler.add_job(
-    #     executor.sync_positions,
-    #     "cron",
-    #     day_of_week="mon-fri",
-    #     hour="9-16",
-    #     second="0",
-    #     timezone="US/Eastern",
-    #     id="position_sync",
-    # )
+    # ── IBKR Position Sync — every minute during market hours ──
+    scheduler.add_job(
+        executor.sync_positions,
+        "cron",
+        day_of_week="mon-fri",
+        hour="9-16",
+        second="0",
+        timezone="US/Eastern",
+        id="position_sync",
+    )
 
     # ── Heartbeat — every 30 seconds ──
     async def send_heartbeat():
@@ -162,20 +162,20 @@ async def main() -> None:
 
     scheduler.add_job(send_heartbeat, "interval", seconds=30, id="heartbeat")
 
-    # ── IBKR PAUSED — Signal execution disabled ──
-    # async def execute_approved_signals():
-    #     signals = await signal_engine.get_approved_signals()
-    #     if not signals:
-    #         return
-    #     balance = await broker.get_account_balance()
-    #     for signal in signals:
-    #         order = build_order_from_signal(signal, balance.total_value)
-    #         success = await executor.execute_signal(signal, order)
-    #         if success:
-    #             await signal_engine.mark_signal_executed(signal["id"])
-    # scheduler.add_job(
-    #     execute_approved_signals, "interval", seconds=10, id="execute_signals"
-    # )
+    # ── IBKR Signal Execution — every 10s, executes approved signals ──
+    async def execute_approved_signals():
+        signals = await signal_engine.get_approved_signals()
+        if not signals:
+            return
+        balance = await broker.get_account_balance()
+        for signal in signals:
+            order = build_order_from_signal(signal, balance.total_value)
+            success = await executor.execute_signal(signal, order)
+            if success:
+                await signal_engine.mark_signal_executed(signal["id"])
+    scheduler.add_job(
+        execute_approved_signals, "interval", seconds=10, id="execute_signals"
+    )
 
     scheduler.start()
     logger.info("Scheduler started with %d jobs:", len(scheduler.get_jobs()))
@@ -184,7 +184,8 @@ async def main() -> None:
 
     logger.info("")
     logger.info("Bot is running. Ctrl+C to stop.")
-    logger.info("MODE: Kalshi BTC 15-min ONLY — IBKR paused")
+    logger.info("MODE: IBKR (paper) + Kalshi BTC 15-min — both ENABLED")
+    logger.info("IBKR: flow scan 1m, congressional 15m, position sync 1m, exec 10s")
     logger.info("BTC Agent: every 5 min, $10/bet (hardcore + UW flow + order book)")
     logger.info("Kalshi Scan: every 30 min (non-BTC markets)")
 

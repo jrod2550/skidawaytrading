@@ -339,8 +339,8 @@ export default function TradesPage() {
               <span className="w-6 h-6 rounded bg-[oklch(0.55_0.18_175_/_0.08)] border border-teal/20 flex items-center justify-center text-[10px] font-bold text-teal">IB</span>
               IBKR Scorecard
             </h3>
-            <Badge variant="outline" className="text-[9px] border-muted-foreground/40 text-muted-foreground">
-              paused
+            <Badge variant="outline" className="text-[9px] border-profit/40 text-profit">
+              paper · live
             </Badge>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -359,7 +359,7 @@ export default function TradesPage() {
             <div className="rounded-lg bg-muted px-3 py-2.5 col-span-3">
               <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Realized P&L</p>
               <p className="text-sm font-mono text-muted-foreground">
-                Tracking once IBKR scheduler is re-enabled
+                Live from IBKR positions table — accumulating as trades fill
               </p>
             </div>
           </div>
