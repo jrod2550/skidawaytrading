@@ -207,11 +207,15 @@ class KalshiPipeline:
         """
         logger.info("Running Kalshi market scan...")
 
-        # Check if bot is paused
+        # Check if bot is paused (global or Kalshi-specific)
         try:
             paused_result = self.db.table("bot_config").select("value").eq("key", "bot_paused").execute()
             if paused_result.data and paused_result.data[0].get("value"):
                 logger.info("Kalshi scan skipped — bot is PAUSED")
+                return 0
+            kpaused_result = self.db.table("bot_config").select("value").eq("key", "kalshi_paused").execute()
+            if kpaused_result.data and kpaused_result.data[0].get("value"):
+                logger.info("Kalshi scan skipped — kalshi_paused is true")
                 return 0
         except Exception:
             pass

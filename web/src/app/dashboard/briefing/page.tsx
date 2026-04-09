@@ -155,7 +155,7 @@ export default function BriefingPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Skidaway AI Analyst</p>
+                  <p className="text-sm font-semibold">Broken Omelette AI Analyst</p>
                   <p className="text-[10px] text-muted-foreground font-mono">
                     {new Date(briefing.generated_at).toLocaleString()} · Claude Sonnet ·{" "}
                     {briefing.token_usage.input_tokens + briefing.token_usage.output_tokens} tokens · ${briefing.token_usage.estimated_cost}

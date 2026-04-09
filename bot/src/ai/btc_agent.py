@@ -235,10 +235,15 @@ class BTCAgent:
         """Check for BTC 15-min market and trade it."""
         logger.info("BTC Agent: scanning...")
 
-        # Check if paused
+        # Check if paused (global or Kalshi-specific)
         try:
             paused = self.db.table("bot_config").select("value").eq("key", "bot_paused").execute()
             if paused.data and paused.data[0].get("value"):
+                logger.info("BTC Agent: bot_paused is true, skipping")
+                return False
+            kpaused = self.db.table("bot_config").select("value").eq("key", "kalshi_paused").execute()
+            if kpaused.data and kpaused.data[0].get("value"):
+                logger.info("BTC Agent: kalshi_paused is true, skipping")
                 return False
         except Exception:
             pass
@@ -375,8 +380,8 @@ YOUR RECENT TRACK RECORD (last {len(recent_results)} windows):
         if price_cents <= 0:
             price_cents = 50
 
-        # Conservative sizing — $3 strong, $2 weak (protect remaining balance)
-        bet_cents = 300 if confidence >= 65 else 200
+        # HIGH MODE — $10 strong, $7 weak
+        bet_cents = 1000 if confidence >= 65 else 700
         contracts = max(1, round(bet_cents / price_cents))
 
         bet_desc = f"BTC 15-min: {direction} — {'YES' if side == 'yes' else 'NO'} {contracts}x @ {price_cents}¢ = ${contracts * price_cents / 100:.2f}"

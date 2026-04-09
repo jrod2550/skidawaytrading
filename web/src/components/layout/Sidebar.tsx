@@ -38,6 +38,8 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
   const router = useRouter();
   const [paused, setPaused] = useState(false);
   const [pauseLoading, setPauseLoading] = useState(false);
+  const [kalshiPaused, setKalshiPaused] = useState(false);
+  const [kalshiPauseLoading, setKalshiPauseLoading] = useState(false);
 
   const isAdmin = profile?.role === "admin";
   const items = isAdmin ? [...navItems, ...adminItems] : navItems;
@@ -67,24 +69,44 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
       .then(({ data }) => {
         if (data) setPaused(Boolean(data.value));
       });
+    supabase
+      .from("bot_config")
+      .select("value")
+      .eq("key", "kalshi_paused")
+      .single()
+      .then(({ data }) => {
+        if (data) setKalshiPaused(Boolean(data.value));
+      });
   }, []);
 
-  async function handleTogglePause() {
-    setPauseLoading(true);
+  async function upsertBotConfig(key: string, value: boolean) {
     const supabase = createClient();
-    const newState = !paused;
     const { data: existing } = await supabase
       .from("bot_config")
       .select("key")
-      .eq("key", "bot_paused")
+      .eq("key", key)
       .single();
     if (existing) {
-      await supabase.from("bot_config").update({ value: newState }).eq("key", "bot_paused");
+      await supabase.from("bot_config").update({ value }).eq("key", key);
     } else {
-      await supabase.from("bot_config").insert({ key: "bot_paused", value: newState });
+      await supabase.from("bot_config").insert({ key, value });
     }
+  }
+
+  async function handleTogglePause() {
+    setPauseLoading(true);
+    const newState = !paused;
+    await upsertBotConfig("bot_paused", newState);
     setPaused(newState);
     setPauseLoading(false);
+  }
+
+  async function handleToggleKalshiPause() {
+    setKalshiPauseLoading(true);
+    const newState = !kalshiPaused;
+    await upsertBotConfig("kalshi_paused", newState);
+    setKalshiPaused(newState);
+    setKalshiPauseLoading(false);
   }
 
   async function handleSignOut() {
@@ -101,14 +123,14 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
         <div className="flex items-center gap-2.5">
           <Image
             src="/logo.webp"
-            alt="Booyah Trading"
+            alt="Broken Omelette Trading"
             width={36}
             height={36}
             className="rounded-lg"
           />
           <div>
             <p className="text-[13px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
-              Booyah
+              Broken Omelette
             </p>
             <p className="text-[9px] font-medium tracking-[0.15em] uppercase text-[oklch(0.60_0.01_250)]">
               Trading
@@ -127,9 +149,9 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
         </div>
       </div>
 
-      {/* Pause all trading button */}
+      {/* Pause buttons */}
       {isAdmin && (
-        <div className="mx-4 mb-3">
+        <div className="mx-4 mb-3 space-y-1.5">
           <button
             onClick={handleTogglePause}
             disabled={pauseLoading}
@@ -143,12 +165,34 @@ export default function Sidebar({ profile, heartbeat, onNavigate }: SidebarProps
             {paused ? (
               <>
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Resume Trading
+                Resume All Trading
               </>
             ) : (
               <>
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                 Pause All Trading
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleToggleKalshiPause}
+            disabled={kalshiPauseLoading}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[10px] font-semibold tracking-wide uppercase transition-all",
+              kalshiPaused
+                ? "bg-gold/10 border border-gold/30 text-gold hover:bg-gold/20"
+                : "bg-muted border border-border text-muted-foreground hover:border-gold/30 hover:text-gold"
+            )}
+          >
+            {kalshiPaused ? (
+              <>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Resume Kalshi
+              </>
+            ) : (
+              <>
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                Pause Kalshi Only
               </>
             )}
           </button>

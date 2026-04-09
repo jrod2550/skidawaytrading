@@ -60,6 +60,70 @@ function shortTicker(ticker: string) {
   return ticker;
 }
 
+interface Scorecard {
+  wins: number;
+  losses: number;
+  winRate: number;
+  netPnl: number;
+  biggestWin: number;
+  biggestLoss: number;
+  streak: number;
+  streakType: "W" | "L" | null;
+  byDay: { day: string; pnl: number; wins: number; losses: number }[];
+}
+
+function buildScorecard(settlements: KalshiSettlement[]): Scorecard {
+  const decided = settlements.filter((s) => s.outcome === "WON" || s.outcome === "LOST");
+  const wins = decided.filter((s) => s.outcome === "WON").length;
+  const losses = decided.filter((s) => s.outcome === "LOST").length;
+  const winRate = decided.length > 0 ? Math.round((wins / decided.length) * 100) : 0;
+  const netPnl = settlements.reduce((sum, s) => sum + s.profit_dollars, 0);
+  const biggestWin = settlements.reduce((max, s) => (s.profit_dollars > max ? s.profit_dollars : max), 0);
+  const biggestLoss = settlements.reduce((min, s) => (s.profit_dollars < min ? s.profit_dollars : min), 0);
+
+  // Current streak — iterate from most recent
+  const sorted = [...decided].sort(
+    (a, b) => new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime()
+  );
+  let streak = 0;
+  let streakType: "W" | "L" | null = null;
+  for (const s of sorted) {
+    const t: "W" | "L" = s.outcome === "WON" ? "W" : "L";
+    if (streakType === null) {
+      streakType = t;
+      streak = 1;
+    } else if (streakType === t) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  // Daily aggregation (last 7 days)
+  const byDayMap = new Map<string, { pnl: number; wins: number; losses: number; ts: number }>();
+  for (const s of settlements) {
+    const d = new Date(s.settled_at);
+    const dayKey = d.toISOString().slice(0, 10);
+    const existing = byDayMap.get(dayKey) ?? { pnl: 0, wins: 0, losses: 0, ts: d.getTime() };
+    existing.pnl += s.profit_dollars;
+    if (s.outcome === "WON") existing.wins++;
+    if (s.outcome === "LOST") existing.losses++;
+    byDayMap.set(dayKey, existing);
+  }
+  const byDay = Array.from(byDayMap.entries())
+    .sort((a, b) => b[1].ts - a[1].ts)
+    .slice(0, 7)
+    .reverse()
+    .map(([key, v]) => ({
+      day: new Date(key).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      pnl: v.pnl,
+      wins: v.wins,
+      losses: v.losses,
+    }));
+
+  return { wins, losses, winRate, netPnl, biggestWin, biggestLoss, streak, streakType, byDay };
+}
+
 export default function TradesPage() {
   const supabase = createClient();
   const [ibkrTrades, setIbkrTrades] = useState<Trade[]>([]);
@@ -112,6 +176,13 @@ export default function TradesPage() {
   const btcWins = btcSettlements.filter((s) => s.outcome === "WON").length;
   const btcLosses = btcSettlements.filter((s) => s.outcome === "LOST").length;
   const btcConflicts = btcSettlements.filter((s) => s.had_conflict).length;
+
+  // Scorecards
+  const kalshiScore = buildScorecard(kalshiSettlements);
+  const btcScore = buildScorecard(btcSettlements);
+  const ibkrFilled = ibkrTrades.filter((t) => t.status === "filled").length;
+  const ibkrFailed = ibkrTrades.filter((t) => t.status === "failed").length;
+  const dayBarMax = Math.max(1, ...kalshiScore.byDay.map((d) => Math.abs(d.pnl)));
 
   return (
     <div className="space-y-6">
@@ -169,6 +240,128 @@ export default function TradesPage() {
           <div className="rounded-lg bg-muted px-3 py-2.5">
             <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Settled</p>
             <p className="text-lg font-bold font-mono">{kalshiSettlements.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Scorecard: Kalshi vs IBKR side-by-side ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Kalshi scorecard */}
+        <div className="rounded-xl border-2 border-gold/20 bg-card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold tracking-wide uppercase flex items-center gap-2">
+              <span className="w-6 h-6 rounded bg-[oklch(0.65_0.16_85_/_0.12)] border border-gold/20 flex items-center justify-center text-[10px] font-bold text-gold">K</span>
+              Kalshi Scorecard
+            </h3>
+            <p className={`text-xl font-bold font-mono ${kalshiScore.netPnl >= 0 ? "text-profit" : "text-loss"}`}>
+              {kalshiScore.netPnl >= 0 ? "+" : ""}${kalshiScore.netPnl.toFixed(2)}
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Record</p>
+              <p className="text-base font-bold font-mono">
+                <span className="text-profit">{kalshiScore.wins}W</span>{" "}
+                <span className="text-loss">{kalshiScore.losses}L</span>
+              </p>
+              <p className={`text-[9px] font-mono ${kalshiScore.winRate >= 50 ? "text-profit" : "text-loss"}`}>
+                {kalshiScore.winRate}% WR
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Streak</p>
+              <p className={`text-base font-bold font-mono ${
+                kalshiScore.streakType === "W" ? "text-profit" : kalshiScore.streakType === "L" ? "text-loss" : ""
+              }`}>
+                {kalshiScore.streak > 0 ? `${kalshiScore.streak}${kalshiScore.streakType}` : "—"}
+              </p>
+              <p className="text-[9px] font-mono text-muted-foreground">current</p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Spent</p>
+              <p className="text-base font-bold font-mono">${kalshiSpent.toFixed(2)}</p>
+              <p className="text-[9px] font-mono text-muted-foreground">{kalshiSettlements.length} settled</p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Biggest Win</p>
+              <p className="text-base font-bold font-mono text-profit">
+                {kalshiScore.biggestWin > 0 ? `+$${kalshiScore.biggestWin.toFixed(2)}` : "—"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Biggest Loss</p>
+              <p className="text-base font-bold font-mono text-loss">
+                {kalshiScore.biggestLoss < 0 ? `$${kalshiScore.biggestLoss.toFixed(2)}` : "—"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Avg / Trade</p>
+              <p className={`text-base font-bold font-mono ${
+                kalshiSettlements.length > 0 && kalshiScore.netPnl / kalshiSettlements.length >= 0 ? "text-profit" : "text-loss"
+              }`}>
+                {kalshiSettlements.length > 0
+                  ? `${kalshiScore.netPnl >= 0 ? "+" : ""}$${(kalshiScore.netPnl / kalshiSettlements.length).toFixed(2)}`
+                  : "—"}
+              </p>
+            </div>
+          </div>
+          {/* Daily P&L bars */}
+          {kalshiScore.byDay.length > 0 && (
+            <div>
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground mb-2">Daily P&L (last 7d)</p>
+              <div className="flex items-end gap-1.5 h-16">
+                {kalshiScore.byDay.map((d) => {
+                  const heightPct = (Math.abs(d.pnl) / dayBarMax) * 100;
+                  const isPos = d.pnl >= 0;
+                  return (
+                    <div key={d.day} className="flex-1 flex flex-col items-center justify-end gap-1">
+                      <span className={`text-[8px] font-mono ${isPos ? "text-profit" : "text-loss"}`}>
+                        {isPos ? "+" : ""}${d.pnl.toFixed(0)}
+                      </span>
+                      <div
+                        className={`w-full rounded-t ${isPos ? "bg-profit" : "bg-loss"}`}
+                        style={{ height: `${Math.max(4, heightPct)}%` }}
+                        title={`${d.day}: ${d.wins}W ${d.losses}L`}
+                      />
+                      <span className="text-[8px] text-muted-foreground">{d.day}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* IBKR scorecard */}
+        <div className="rounded-xl border-2 border-teal/20 bg-card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold tracking-wide uppercase flex items-center gap-2">
+              <span className="w-6 h-6 rounded bg-[oklch(0.55_0.18_175_/_0.08)] border border-teal/20 flex items-center justify-center text-[10px] font-bold text-teal">IB</span>
+              IBKR Scorecard
+            </h3>
+            <Badge variant="outline" className="text-[9px] border-muted-foreground/40 text-muted-foreground">
+              paused
+            </Badge>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Trades</p>
+              <p className="text-base font-bold font-mono">{ibkrTrades.length}</p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Filled</p>
+              <p className="text-base font-bold font-mono text-profit">{ibkrFilled}</p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Failed</p>
+              <p className="text-base font-bold font-mono text-loss">{ibkrFailed}</p>
+            </div>
+            <div className="rounded-lg bg-muted px-3 py-2.5 col-span-3">
+              <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Realized P&L</p>
+              <p className="text-sm font-mono text-muted-foreground">
+                Tracking once IBKR scheduler is re-enabled
+              </p>
+            </div>
           </div>
         </div>
       </div>

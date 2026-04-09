@@ -118,7 +118,7 @@ export default function MembersPage() {
             </p>
             <p>
               <span className="text-muted-foreground">Reference:</span> Your
-              name + &quot;Skidaway Pool&quot;
+              name + &quot;Broken Omelette Pool&quot;
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
